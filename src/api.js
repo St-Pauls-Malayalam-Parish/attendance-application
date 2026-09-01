@@ -1,0 +1,54 @@
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+
+export async function api(path, { method = 'GET', body } = {}) {
+  const response = await fetch(`${API_BASE}${path}`, {
+    method,
+    credentials: 'include',
+    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || 'Request failed');
+  }
+  return data;
+}
+
+export function formatDate(value) {
+  return new Date(value).toLocaleString('en-IN', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+export function toDateInput(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+export function toDateTimeLocal(value) {
+  const date = value ? new Date(value) : new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+export const VOICE_PARTS = [
+  { value: 'soprano', label: 'Soprano' },
+  { value: 'alto', label: 'Alto' },
+  { value: 'tenor', label: 'Tenor' },
+  { value: 'bass', label: 'Bass' },
+  { value: 'other', label: 'Other' },
+];
+
+export const EVENT_TYPES = [
+  { value: 'rehearsal', label: 'Rehearsal' },
+  { value: 'service', label: 'Service' },
+  { value: 'concert', label: 'Concert' },
+  { value: 'other', label: 'Other' },
+];

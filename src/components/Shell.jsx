@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../AuthContext.jsx';
+import { publicUrl } from '../publicUrl.js';
 
 export function Shell({ children, links }) {
   const { user, logout } = useAuth();
@@ -8,7 +9,7 @@ export function Shell({ children, links }) {
     <div className="app-shell">
       <header className="topbar">
         <div className="brand">
-          <img src="/csi-logo.png" alt="Church of South India" className="brand-logo" />
+          <img src={publicUrl('csi-logo.png')} alt="Church of South India" className="brand-logo" />
           <div>
             <strong>St Paul's Malayalam Parish</strong>
             <p>Choir attendance</p>

@@ -1,6 +1,10 @@
 const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 const TOKEN_KEY = 'choir_auth_token';
 
+export function getApiBase() {
+  return API_BASE;
+}
+
 let onUnauthorized = null;
 
 export function setUnauthorizedHandler(handler) {

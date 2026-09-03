@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { api, setAuthToken, setUnauthorizedHandler } from './api.js';
+import { startBackendWarmup } from './utils/backend-health.js';
 
 const AuthContext = createContext(null);
 
@@ -10,6 +11,15 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     setUnauthorizedHandler(() => setUser(null));
     return () => setUnauthorizedHandler(null);
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const stopWarmup = startBackendWarmup({ signal: controller.signal });
+    return () => {
+      controller.abort();
+      stopWarmup();
+    };
   }, []);
 
   useEffect(() => {

@@ -6,7 +6,7 @@ import { AuthLayout } from '../components/AuthLayout.jsx';
 
 export function Login() {
   const { user, setUser } = useAuth();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -20,7 +20,7 @@ export function Login() {
     setBusy(true);
     setError('');
     try {
-      const data = await api('/api/auth/login', { method: 'POST', body: { email, password } });
+      const data = await api('/api/auth/login', { method: 'POST', body: { username, password } });
       setUser(data.user);
     } catch (err) {
       setError(err.message);
@@ -37,12 +37,12 @@ export function Login() {
       <form onSubmit={onSubmit} className="card form">
         {error ? <p className="alert">{error}</p> : null}
         <label>
-          Email
+          Username
           <input
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            type="text"
+            autoComplete="username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             required
           />
         </label>

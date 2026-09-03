@@ -8,6 +8,7 @@ export function Register() {
   const { user, setUser } = useAuth();
   const [form, setForm] = useState({
     name: '',
+    username: '',
     email: '',
     password: '',
     voicePart: 'other',
@@ -47,6 +48,18 @@ export function Register() {
         <label>
           Full name
           <input value={form.name} onChange={(e) => update('name', e.target.value)} required />
+        </label>
+        <label>
+          Username
+          <input
+            type="text"
+            autoComplete="username"
+            minLength={3}
+            value={form.username}
+            onChange={(e) => update('username', e.target.value.toLowerCase())}
+            placeholder="e.g. firstname.lastname"
+            required
+          />
         </label>
         <label>
           Email

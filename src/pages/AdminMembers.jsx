@@ -3,14 +3,38 @@ import { api, VOICE_PARTS } from '../api.js';
 
 const emptyForm = {
   name: '',
+  username: '',
   email: '',
   password: '',
   voicePart: 'other',
 };
 
+function MemberActions({ member, onEdit, onSetActive, onDelete }) {
+  return (
+    <>
+      <button type="button" className="ghost" onClick={() => onEdit(member)}>
+        Edit
+      </button>
+      {member.active ? (
+        <button type="button" className="ghost danger" onClick={() => onSetActive(member, false)}>
+          Deactivate
+        </button>
+      ) : (
+        <button type="button" className="ghost" onClick={() => onSetActive(member, true)}>
+          Reactivate
+        </button>
+      )}
+      <button type="button" className="ghost danger" onClick={() => onDelete(member)}>
+        Delete permanently
+      </button>
+    </>
+  );
+}
+
 export function AdminMembers() {
   const [pending, setPending] = useState([]);
   const [members, setMembers] = useState([]);
+  const [inactive, setInactive] = useState([]);
   const [declined, setDeclined] = useState([]);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState('');
@@ -22,6 +46,7 @@ export function AdminMembers() {
     const data = await api('/api/members');
     setPending(data.pending);
     setMembers(data.members);
+    setInactive(data.inactive);
     setDeclined(data.declined);
   }
 
@@ -35,6 +60,7 @@ export function AdminMembers() {
     setEditingId(member.id);
     setForm({
       name: member.name,
+      username: member.username,
       email: member.email,
       password: '',
       voicePart: member.voicePart || 'other',
@@ -56,6 +82,7 @@ export function AdminMembers() {
       if (editingId) {
         const body = {
           name: form.name,
+          username: form.username,
           email: form.email,
           voicePart: form.voicePart,
         };
@@ -80,11 +107,55 @@ export function AdminMembers() {
 
   async function setApproval(id, approvalStatus) {
     setError('');
+    setSaved('');
     try {
       await api(`/api/members/${id}/approval`, {
         method: 'PATCH',
         body: { approvalStatus },
       });
+      await load();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function setActive(member, active) {
+    setError('');
+    setSaved('');
+    if (!window.confirm(`${active ? 'Reactivate' : 'Deactivate'} ${member.name}?`)) {
+      return;
+    }
+    try {
+      await api(`/api/members/${member.id}/active`, {
+        method: 'PATCH',
+        body: { active },
+      });
+      if (editingId === member.id && !active) {
+        cancelEdit();
+      }
+      setSaved(active ? 'Member reactivated' : 'Member deactivated');
+      await load();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function removeMember(member) {
+    setError('');
+    setSaved('');
+    if (
+      !window.confirm(
+        `Permanently delete ${member.name}? This cannot be undone and removes all their attendance records.`
+      )
+    ) {
+      return;
+    }
+    try {
+      await api(`/api/members/${member.id}`, { method: 'DELETE' });
+      if (editingId === member.id) {
+        cancelEdit();
+      }
+      setSaved('Member deleted permanently');
       await load();
     } catch (err) {
       setError(err.message);
@@ -98,8 +169,8 @@ export function AdminMembers() {
           <p className="eyebrow">Admin</p>
           <h1>Choir members</h1>
           <p className="lede">
-            New sign-ups wait here until you approve them. Use Edit on the roster to change a
-            singer’s name, email, voice part, or password.
+            Approve new sign-ups, edit roster details, deactivate members (they cannot sign in but
+            attendance history is kept), or delete permanently.
           </p>
         </div>
       </section>
@@ -116,6 +187,7 @@ export function AdminMembers() {
             <thead>
               <tr>
                 <th>Name</th>
+                <th>Username</th>
                 <th>Email</th>
                 <th>Voice</th>
                 <th></th>
@@ -125,12 +197,10 @@ export function AdminMembers() {
               {pending.map((member) => (
                 <tr key={member.id}>
                   <td>{member.name}</td>
+                  <td>{member.username}</td>
                   <td>{member.email}</td>
                   <td className="capitalize">{member.voicePart}</td>
                   <td className="row-actions">
-                    <button type="button" className="ghost" onClick={() => startEdit(member)}>
-                      Edit
-                    </button>
                     <button type="button" onClick={() => setApproval(member.id, 'approved')}>
                       Approve
                     </button>
@@ -141,6 +211,12 @@ export function AdminMembers() {
                     >
                       Decline
                     </button>
+                    <MemberActions
+                      member={member}
+                      onEdit={startEdit}
+                      onSetActive={setActive}
+                      onDelete={removeMember}
+                    />
                   </td>
                 </tr>
               ))}
@@ -154,6 +230,14 @@ export function AdminMembers() {
         <label>
           Name
           <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+        </label>
+        <label>
+          Username
+          <input
+            value={form.username}
+            onChange={(e) => setForm({ ...form, username: e.target.value.toLowerCase() })}
+            required
+          />
         </label>
         <label>
           Email
@@ -203,6 +287,7 @@ export function AdminMembers() {
           <thead>
             <tr>
               <th>Name</th>
+              <th>Username</th>
               <th>Email</th>
               <th>Voice</th>
               <th>Rate</th>
@@ -212,24 +297,75 @@ export function AdminMembers() {
             </tr>
           </thead>
           <tbody>
-            {members.map((member) => (
-              <tr key={member.id} className={editingId === member.id ? 'editing' : ''}>
-                <td>{member.name}</td>
-                <td>{member.email}</td>
-                <td className="capitalize">{member.voicePart}</td>
-                <td>{member.summary.rate}%</td>
-                <td>{member.summary.present}</td>
-                <td>{member.summary.absent}</td>
-                <td className="row-actions">
-                  <button type="button" className="ghost" onClick={() => startEdit(member)}>
-                    Edit
-                  </button>
+            {members.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="muted">
+                  No active members on the roster.
                 </td>
               </tr>
-            ))}
+            ) : (
+              members.map((member) => (
+                <tr key={member.id} className={editingId === member.id ? 'editing' : ''}>
+                  <td>{member.name}</td>
+                  <td>{member.username}</td>
+                  <td>{member.email}</td>
+                  <td className="capitalize">{member.voicePart}</td>
+                  <td>{member.summary.rate}%</td>
+                  <td>{member.summary.present}</td>
+                  <td>{member.summary.absent}</td>
+                  <td className="row-actions">
+                    <MemberActions
+                      member={member}
+                      onEdit={startEdit}
+                      onSetActive={setActive}
+                      onDelete={removeMember}
+                    />
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
+
+      {inactive.length > 0 ? (
+        <div className="card">
+          <h2>Inactive ({inactive.length})</h2>
+          <p className="muted">
+            Deactivated members cannot sign in. Their attendance history is kept until you delete them
+            permanently.
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {inactive.map((member) => (
+                <tr key={member.id}>
+                  <td>{member.name}</td>
+                  <td>{member.username}</td>
+                  <td>{member.email}</td>
+                  <td className="capitalize">{member.approvalStatus}</td>
+                  <td className="row-actions">
+                    <MemberActions
+                      member={member}
+                      onEdit={startEdit}
+                      onSetActive={setActive}
+                      onDelete={removeMember}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
 
       {declined.length > 0 ? (
         <div className="card">
@@ -238,6 +374,7 @@ export function AdminMembers() {
             <thead>
               <tr>
                 <th>Name</th>
+                <th>Username</th>
                 <th>Email</th>
                 <th></th>
               </tr>
@@ -246,14 +383,18 @@ export function AdminMembers() {
               {declined.map((member) => (
                 <tr key={member.id}>
                   <td>{member.name}</td>
+                  <td>{member.username}</td>
                   <td>{member.email}</td>
                   <td className="row-actions">
-                    <button type="button" className="ghost" onClick={() => startEdit(member)}>
-                      Edit
-                    </button>
                     <button type="button" className="ghost" onClick={() => setApproval(member.id, 'approved')}>
                       Approve anyway
                     </button>
+                    <MemberActions
+                      member={member}
+                      onEdit={startEdit}
+                      onSetActive={setActive}
+                      onDelete={removeMember}
+                    />
                   </td>
                 </tr>
               ))}

@@ -14,7 +14,7 @@ export function Login() {
   const sessionExpired = searchParams.get('session') === 'expired';
 
   if (user) {
-    return <Navigate to={user.role === 'admin' ? '/admin' : '/'} replace />;
+    return <Navigate to={user.role === 'admin' ? '/admin/events' : '/attendance'} replace />;
   }
 
   async function onSubmit(event) {

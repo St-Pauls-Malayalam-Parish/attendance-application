@@ -1,8 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, formatDate, formatEventType } from '../api.js';
-import { LiturgicalColorBadge } from '../components/LiturgicalColorBadge.jsx';
+import { EventCard } from '../components/EventCard.jsx';
+import { EventFiltersForm } from '../components/EventFiltersForm.jsx';
 import { Pagination } from '../components/Pagination.jsx';
+import {
+  emptyEventFilters,
+  eventFiltersToParams,
+  filtersAreActive,
+} from '../utils/event-filters.js';
 
 const STATUSES = [
   { value: 'present', label: 'Present' },
@@ -11,13 +17,15 @@ const STATUSES = [
   { value: 'excused', label: 'Excused' },
 ];
 
-const EVENT_PAGE_SIZE = 20;
+const EVENT_PAGE_SIZE = 12;
 
 export function AdminAttendance() {
   const { eventId } = useParams();
   const navigate = useNavigate();
-  const [eventOptions, setEventOptions] = useState([]);
-  const [eventSearch, setEventSearch] = useState('');
+  const [events, setEvents] = useState([]);
+  const [years, setYears] = useState([]);
+  const [filters, setFilters] = useState(emptyEventFilters);
+  const [searchDraft, setSearchDraft] = useState('');
   const [eventPage, setEventPage] = useState(1);
   const [eventPagination, setEventPagination] = useState({
     total: 0,
@@ -27,67 +35,94 @@ export function AdminAttendance() {
     rangeStart: 0,
     rangeEnd: 0,
   });
-  const [loadingEvents, setLoadingEvents] = useState(true);
+  const [totalUnfiltered, setTotalUnfiltered] = useState(0);
+  const [loadingEvents, setLoadingEvents] = useState(!eventId);
   const [roster, setRoster] = useState([]);
   const [event, setEvent] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState('');
 
+  const filtersActive = useMemo(() => filtersAreActive(filters), [filters]);
+
   useEffect(() => {
-    let cancelled = false;
     const timer = setTimeout(() => {
-      setLoadingEvents(true);
-      const params = new URLSearchParams({
-        page: String(eventPage),
-        limit: String(EVENT_PAGE_SIZE),
-      });
-      if (eventSearch.trim()) {
-        params.set('search', eventSearch.trim());
-      }
-      api(`/api/events?${params}`)
-        .then((data) => {
-          if (cancelled) return;
-          setEventOptions(data.events);
-          setEventPagination(data.pagination);
-          if (data.pagination.page !== eventPage) {
-            setEventPage(data.pagination.page);
-          }
-        })
-        .catch((err) => {
-          if (!cancelled) setError(err.message);
-        })
-        .finally(() => {
-          if (!cancelled) setLoadingEvents(false);
-        });
+      setFilters((current) => ({ ...current, search: searchDraft }));
+      setEventPage(1);
     }, 300);
+    return () => clearTimeout(timer);
+  }, [searchDraft]);
+
+  useEffect(() => {
+    if (eventId) return undefined;
+    api('/api/events/years')
+      .then((data) => setYears(data.years))
+      .catch((err) => setError(err.message));
+    return undefined;
+  }, [eventId]);
+
+  useEffect(() => {
+    if (eventId) return undefined;
+
+    let cancelled = false;
+    setLoadingEvents(true);
+    const params = eventFiltersToParams(filters, { page: eventPage, pageSize: EVENT_PAGE_SIZE });
+
+    api(`/api/events?${params}`)
+      .then((data) => {
+        if (cancelled) return;
+        setEvents(data.events);
+        setEventPagination(data.pagination);
+        setTotalUnfiltered(data.meta.totalUnfiltered);
+        if (data.pagination.page !== eventPage) {
+          setEventPage(data.pagination.page);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.message);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingEvents(false);
+      });
 
     return () => {
       cancelled = true;
-      clearTimeout(timer);
     };
-  }, [eventSearch, eventPage]);
+  }, [eventId, filters, eventPage]);
 
   useEffect(() => {
     if (!eventId) {
       setRoster([]);
       setEvent(null);
-      return;
+      return undefined;
     }
+
     setSaved('');
+    setError('');
     api(`/api/attendance/event/${eventId}`)
       .then((data) => {
         setEvent(data.event);
         setRoster(data.roster);
       })
       .catch((err) => setError(err.message));
+
+    return undefined;
   }, [eventId]);
 
-  const selectOptions = useMemo(() => {
-    if (!event) return eventOptions;
-    if (eventOptions.some((item) => item.id === event.id)) return eventOptions;
-    return [event, ...eventOptions];
-  }, [event, eventOptions]);
+  function updateFilter(key, value) {
+    if (key === 'search') {
+      setSearchDraft(value);
+      return;
+    }
+    setFilters((current) => ({ ...current, [key]: value }));
+    setEventPage(1);
+  }
+
+  function clearFilters() {
+    setSearchDraft('');
+    setFilters(emptyEventFilters());
+    setEventPage(1);
+  }
 
   function updateRow(memberId, patch) {
     setRoster((current) =>
@@ -116,11 +151,80 @@ export function AdminAttendance() {
     }
   }
 
+  if (!eventId) {
+    return (
+      <>
+        <section className="page-head">
+          <div>
+            <p className="eyebrow">Take attendance</p>
+            <h1>Take attendance</h1>
+            <p className="lede">Choose a practice or service, then mark who was present.</p>
+          </div>
+        </section>
+
+        {error ? <p className="alert">{error}</p> : null}
+
+        <div className="card events-card">
+          <h2>Upcoming and past</h2>
+
+          <EventFiltersForm
+            searchDraft={searchDraft}
+            filters={filters}
+            years={years}
+            filtersActive={filtersActive}
+            onSearchChange={(value) => updateFilter('search', value)}
+            onFilterChange={updateFilter}
+            onClear={clearFilters}
+          />
+
+          <p className="muted filter-summary">
+            {eventPagination.total} of {totalUnfiltered} event{totalUnfiltered === 1 ? '' : 's'} match
+            {filtersActive ? ' these filters' : ''}
+          </p>
+
+          {loadingEvents ? (
+            <p className="muted">Loading events…</p>
+          ) : eventPagination.total === 0 ? (
+            <p className="muted">No events match these filters.</p>
+          ) : (
+            <>
+              <div className="event-cards">
+                {events.map((item) => (
+                  <EventCard
+                    key={item.id}
+                    event={item}
+                    onSelect={() => navigate(`/admin/attendance/${item.id}`)}
+                  />
+                ))}
+              </div>
+
+              <Pagination
+                page={eventPagination.page}
+                pageSize={EVENT_PAGE_SIZE}
+                totalItems={eventPagination.total}
+                totalPages={eventPagination.totalPages}
+                rangeStart={eventPagination.rangeStart}
+                rangeEnd={eventPagination.rangeEnd}
+                hasPrevious={eventPagination.hasPrevious}
+                hasNext={eventPagination.hasNext}
+                onPageChange={setEventPage}
+                onPageSizeChange={() => {}}
+                showPageSize={false}
+                itemLabel="events"
+                disabled={loadingEvents}
+              />
+            </>
+          )}
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <section className="page-head">
         <div>
-          <p className="eyebrow">Admin</p>
+          <p className="eyebrow">Take attendance</p>
           <h1>Take attendance</h1>
           <p className="lede">
             Mark each singer and add a short note if needed (for example, arrived late or excused
@@ -131,60 +235,9 @@ export function AdminAttendance() {
 
       {error ? <p className="alert">{error}</p> : null}
 
-      <div className="card event-picker">
-        <label>
-          Search events
-          <input
-            type="search"
-            value={eventSearch}
-            onChange={(e) => {
-              setEventSearch(e.target.value);
-              setEventPage(1);
-            }}
-            placeholder="Search by title or notes"
-          />
-        </label>
-
-        <label>
-          Choose an event
-          <select
-            value={eventId || ''}
-            onChange={(e) =>
-              navigate(e.target.value ? `/admin/attendance/${e.target.value}` : '/admin/attendance')
-            }
-            disabled={loadingEvents}
-          >
-            <option value="">
-              {loadingEvents ? 'Loading events…' : 'Select a practice or service'}
-            </option>
-            {selectOptions.map((item) => (
-              <option key={item.id} value={item.id}>
-                {formatDate(item.date)} — {item.title}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        {eventPagination.total > 0 ? (
-          <Pagination
-            page={eventPagination.page}
-            pageSize={EVENT_PAGE_SIZE}
-            totalItems={eventPagination.total}
-            totalPages={eventPagination.totalPages}
-            rangeStart={eventPagination.rangeStart}
-            rangeEnd={eventPagination.rangeEnd}
-            hasPrevious={eventPagination.hasPrevious}
-            hasNext={eventPagination.hasNext}
-            onPageChange={setEventPage}
-            onPageSizeChange={() => {}}
-            showPageSize={false}
-            itemLabel="events"
-            disabled={loadingEvents}
-          />
-        ) : !loadingEvents ? (
-          <p className="muted">No events match your search.</p>
-        ) : null}
-      </div>
+      <p className="back-link">
+        <Link to="/admin/attendance">← All events</Link>
+      </p>
 
       {event ? (
         <div className="card attendance-card">
@@ -252,7 +305,7 @@ export function AdminAttendance() {
           </table>
         </div>
       ) : (
-        <p className="muted">Pick an event to mark the choir.</p>
+        <p className="muted">Loading attendance…</p>
       )}
     </>
   );

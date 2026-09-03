@@ -11,10 +11,10 @@ export function ProtectedRoute({ adminOnly = false }) {
     return <Navigate to="/login" replace />;
   }
   if (adminOnly && user.role !== 'admin') {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/attendance" replace />;
   }
   if (!adminOnly && user.role === 'admin') {
-    return <Navigate to="/admin" replace />;
+    return <Navigate to="/admin/events" replace />;
   }
   return <Outlet />;
 }

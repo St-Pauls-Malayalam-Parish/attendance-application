@@ -15,19 +15,21 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route element={<ProtectedRoute />}>
-        <Route path="/" element={<MemberHome />} />
-        <Route path="/account" element={<Account />} />
+        <Route index element={<Navigate to="attendance" replace />} />
+        <Route path="attendance" element={<MemberHome />} />
+        <Route path="account" element={<Account />} />
       </Route>
       <Route element={<ProtectedRoute adminOnly />}>
         <Route path="/admin" element={<AdminHome />}>
-          <Route index element={<AdminEvents />} />
+          <Route index element={<Navigate to="events" replace />} />
+          <Route path="events" element={<AdminEvents />} />
           <Route path="attendance" element={<AdminAttendance />} />
           <Route path="attendance/:eventId" element={<AdminAttendance />} />
           <Route path="members" element={<AdminMembers />} />
           <Route path="account" element={<Account admin />} />
         </Route>
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/attendance" replace />} />
     </Routes>
   );
 }

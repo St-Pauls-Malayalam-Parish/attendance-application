@@ -1,15 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api, EVENT_TYPES, LITURGICAL_COLORS, formatDate, formatEventType, toDateTimeLocal } from '../api.js';
-import { LiturgicalColorBadge } from '../components/LiturgicalColorBadge.jsx';
+import { api, EVENT_TYPES, LITURGICAL_COLORS, toDateTimeLocal } from '../api.js';
+import { EventCard } from '../components/EventCard.jsx';
+import { EventCalendar } from '../components/EventCalendar.jsx';
+import { EventDetailPanel } from '../components/EventDetailPanel.jsx';
 import { ConfirmDialog } from '../components/ConfirmDialog.jsx';
+import { EventFiltersForm } from '../components/EventFiltersForm.jsx';
 import { Pagination } from '../components/Pagination.jsx';
+import { ViewToggle } from '../components/ViewToggle.jsx';
 import {
   emptyEventFilters,
   eventFiltersToParams,
   filtersAreActive,
 } from '../utils/event-filters.js';
+import { formatMonthYear, monthFilterRange, startOfMonth } from '../utils/calendar.js';
 import { PAGE_SIZE_OPTIONS } from '../utils/pagination.js';
+
+const CALENDAR_EVENT_LIMIT = 100;
 
 const emptyForm = () => ({
   title: '',
@@ -46,8 +53,17 @@ export function AdminEvents() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
+  const [viewMode, setViewMode] = useState('calendar');
+  const [calendarMonth, setCalendarMonth] = useState(() => startOfMonth(new Date()));
+  const [calendarEvents, setCalendarEvents] = useState([]);
+  const [selectedCalendarEventId, setSelectedCalendarEventId] = useState(null);
+  const [calendarDetailOpen, setCalendarDetailOpen] = useState(false);
 
   const filtersActive = useMemo(() => filtersAreActive(filters), [filters]);
+  const selectedCalendarEvent = useMemo(
+    () => calendarEvents.find((event) => event.id === selectedCalendarEventId) ?? null,
+    [calendarEvents, selectedCalendarEventId]
+  );
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -62,6 +78,31 @@ export function AdminEvents() {
     setYears(data.years);
   }
 
+  async function loadCalendarEvents(nextMonth = calendarMonth, nextFilters = filters) {
+    const range = monthFilterRange(nextMonth, nextFilters.from, nextFilters.to);
+
+    if (!range) {
+      setCalendarEvents([]);
+      setPagination((current) => ({ ...current, total: 0 }));
+      setSelectedCalendarEventId(null);
+      return { events: [], pagination: { total: 0 }, meta: { totalUnfiltered } };
+    }
+
+    const params = eventFiltersToParams(
+      { ...nextFilters, from: range.from, to: range.to },
+      { page: 1, pageSize: CALENDAR_EVENT_LIMIT }
+    );
+
+    const data = await api(`/api/events?${params}`);
+    setCalendarEvents(data.events);
+    setTotalUnfiltered(data.meta.totalUnfiltered);
+    setPagination((current) => ({ ...current, total: data.pagination.total }));
+    setSelectedCalendarEventId((current) =>
+      data.events.some((event) => event.id === current) ? current : null
+    );
+    return data;
+  }
+
   async function loadEvents(nextPage = page, nextPageSize = pageSize, nextFilters = filters) {
     const params = eventFiltersToParams(nextFilters, { page: nextPage, pageSize: nextPageSize });
     const data = await api(`/api/events?${params}`);
@@ -71,6 +112,7 @@ export function AdminEvents() {
     if (data.pagination.page !== nextPage) {
       setPage(data.pagination.page);
     }
+    return data;
   }
 
   useEffect(() => {
@@ -80,7 +122,12 @@ export function AdminEvents() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    loadEvents(page, pageSize, filters)
+    const loader =
+      viewMode === 'calendar'
+        ? loadCalendarEvents(calendarMonth, filters)
+        : loadEvents(page, pageSize, filters);
+
+    loader
       .catch((err) => {
         if (!cancelled) setError(err.message);
       })
@@ -90,12 +137,15 @@ export function AdminEvents() {
     return () => {
       cancelled = true;
     };
-  }, [page, pageSize, filters]);
+  }, [page, pageSize, filters, viewMode, calendarMonth]);
 
   function updateFilter(key, value) {
     if (key === 'search') {
       setSearchDraft(value);
       return;
+    }
+    if (key === 'year' && value) {
+      setCalendarMonth(new Date(Number(value), calendarMonth.getMonth(), 1));
     }
     setFilters((current) => ({ ...current, [key]: value }));
     setPage(1);
@@ -113,7 +163,55 @@ export function AdminEvents() {
   }
 
   async function refreshAfterMutation() {
+    if (viewMode === 'calendar') {
+      await Promise.all([loadCalendarEvents(calendarMonth, filters), loadYears()]);
+      return;
+    }
     await Promise.all([loadEvents(page, pageSize, filters), loadYears()]);
+  }
+
+  function renderEventActions(event, { onAction } = {}) {
+    function run(action) {
+      onAction?.();
+      action();
+    }
+
+    return (
+      <>
+        <Link
+          to={`/admin/attendance/${event.id}`}
+          className="table-action primary"
+          onClick={() => onAction?.()}
+        >
+          Take attendance
+        </Link>
+        <div className="table-actions-row">
+          <button
+            type="button"
+            className="ghost table-action"
+            onClick={() => run(() => startEdit(event))}
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            className="ghost danger table-action"
+            onClick={() => run(() => setDeleteId(event.id))}
+          >
+            Delete
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  function handleCalendarEventSelect(event) {
+    setSelectedCalendarEventId(event.id);
+    setCalendarDetailOpen(true);
+  }
+
+  function closeCalendarDetail() {
+    setCalendarDetailOpen(false);
   }
 
   function startEdit(event) {
@@ -179,7 +277,7 @@ export function AdminEvents() {
     <>
       <section className="page-head">
         <div>
-          <p className="eyebrow">Admin</p>
+          <p className="eyebrow">Events</p>
           <h1>Practices and services</h1>
           <p className="lede">Create events, then mark who was present from Take attendance.</p>
         </div>
@@ -248,127 +346,104 @@ export function AdminEvents() {
       </form>
 
       <div className="card events-card">
-        <h2>Upcoming and past</h2>
+        <div className="events-card-head">
+          <h2>Upcoming and past</h2>
+          <ViewToggle
+            value={viewMode}
+            onChange={setViewMode}
+            options={[
+              { value: 'calendar', label: 'Calendar' },
+              { value: 'tiles', label: 'Tiles' },
+            ]}
+          />
+        </div>
 
-        <form className="form grid-form event-filters" onSubmit={(e) => e.preventDefault()}>
-          <label className="span-2">
-            Search
-            <input
-              type="search"
-              value={searchDraft}
-              onChange={(e) => updateFilter('search', e.target.value)}
-              placeholder="Search title or notes"
-            />
-          </label>
-          <label>
-            Year
-            <select value={filters.year} onChange={(e) => updateFilter('year', e.target.value)}>
-              <option value="">All years</option>
-              {years.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Type
-            <select value={filters.type} onChange={(e) => updateFilter('type', e.target.value)}>
-              <option value="">All types</option>
-              {EVENT_TYPES.map((type) => (
-                <option key={type.value} value={type.value}>
-                  {type.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            From
-            <input
-              type="date"
-              value={filters.from}
-              onChange={(e) => updateFilter('from', e.target.value)}
-            />
-          </label>
-          <label>
-            To
-            <input type="date" value={filters.to} onChange={(e) => updateFilter('to', e.target.value)} />
-          </label>
-          <label>
-            Liturgical colour
-            <select
-              value={filters.liturgicalColor}
-              onChange={(e) => updateFilter('liturgicalColor', e.target.value)}
-            >
-              <option value="">All colours</option>
-              <option value="__none__">Not set</option>
-              {LITURGICAL_COLORS.filter((color) => color.value).map((color) => (
-                <option key={color.value} value={color.value}>
-                  {color.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="row-actions span-2">
-            <button type="button" className="ghost" onClick={clearFilters} disabled={!filtersActive}>
-              Clear filters
-            </button>
-          </div>
-        </form>
+        <EventFiltersForm
+          searchDraft={searchDraft}
+          filters={filters}
+          years={years}
+          filtersActive={filtersActive}
+          onSearchChange={(value) => updateFilter('search', value)}
+          onFilterChange={updateFilter}
+          onClear={clearFilters}
+        />
 
         <p className="muted filter-summary">
-          {pagination.total} of {totalUnfiltered} event{totalUnfiltered === 1 ? '' : 's'} match
-          {filtersActive ? ' these filters' : ''}
+          {viewMode === 'calendar'
+            ? `${pagination.total} event${pagination.total === 1 ? '' : 's'} in ${formatMonthYear(calendarMonth)}${filtersActive ? ' match these filters' : ''}`
+            : `${pagination.total} of ${totalUnfiltered} event${totalUnfiltered === 1 ? '' : 's'} match${filtersActive ? ' these filters' : ''}`}
         </p>
 
         {loading ? (
           <p className="muted">Loading events…</p>
+        ) : viewMode === 'calendar' ? (
+          <>
+            {calendarEvents.length === 0 ? (
+              <p className="muted">
+                No events in {formatMonthYear(calendarMonth)}
+                {filtersActive ? ' match these filters' : ''}.
+              </p>
+            ) : null}
+
+            <div className="calendar-layout">
+              <div className="calendar-layout-main">
+                <EventCalendar
+                  events={calendarEvents}
+                  month={calendarMonth}
+                  selectedEventId={selectedCalendarEventId}
+                  onMonthChange={setCalendarMonth}
+                  onEventSelect={handleCalendarEventSelect}
+                />
+              </div>
+
+              <aside className="calendar-layout-panel">
+                <EventDetailPanel
+                  event={selectedCalendarEvent}
+                  editing={editingId === selectedCalendarEvent?.id}
+                  actions={
+                    selectedCalendarEvent
+                      ? renderEventActions(selectedCalendarEvent)
+                      : null
+                  }
+                />
+              </aside>
+            </div>
+
+            {calendarDetailOpen && selectedCalendarEvent ? (
+              <div className="calendar-detail-dialog" role="dialog" aria-modal="true">
+                <button
+                  type="button"
+                  className="calendar-detail-backdrop"
+                  aria-label="Close event details"
+                  onClick={closeCalendarDetail}
+                />
+                <div className="calendar-detail-sheet">
+                  <EventDetailPanel
+                    event={selectedCalendarEvent}
+                    editing={editingId === selectedCalendarEvent.id}
+                    actions={renderEventActions(selectedCalendarEvent, {
+                      onAction: closeCalendarDetail,
+                    })}
+                    onClose={closeCalendarDetail}
+                  />
+                </div>
+              </div>
+            ) : null}
+          </>
         ) : pagination.total === 0 ? (
           <p className="muted">No events match these filters.</p>
         ) : (
           <>
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Title</th>
-                  <th>Type</th>
-                  <th>Colour</th>
-                  <th className="actions-col">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {events.map((event) => (
-                  <tr key={event.id} className={editingId === event.id ? 'editing' : ''}>
-                    <td>{formatDate(event.date)}</td>
-                    <td>{event.title}</td>
-                    <td>{formatEventType(event.type)}</td>
-                    <td>
-                      <LiturgicalColorBadge color={event.liturgicalColor} />
-                    </td>
-                    <td className="table-actions-cell">
-                      <div className="table-actions">
-                        <Link to={`/admin/attendance/${event.id}`} className="table-action primary">
-                          Take attendance
-                        </Link>
-                        <div className="table-actions-row">
-                          <button type="button" className="ghost table-action" onClick={() => startEdit(event)}>
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            className="ghost danger table-action"
-                            onClick={() => setDeleteId(event.id)}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="event-cards">
+              {events.map((event) => (
+                <EventCard
+                  key={event.id}
+                  event={event}
+                  selected={editingId === event.id}
+                  actions={renderEventActions(event)}
+                />
+              ))}
+            </div>
 
             <Pagination
               page={pagination.page}

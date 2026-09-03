@@ -17,7 +17,7 @@ export function Register() {
   const [busy, setBusy] = useState(false);
 
   if (user) {
-    return <Navigate to={user.role === 'admin' ? '/admin' : '/'} replace />;
+    return <Navigate to={user.role === 'admin' ? '/admin/events' : '/attendance'} replace />;
   }
 
   function update(key, value) {

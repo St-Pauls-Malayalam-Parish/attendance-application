@@ -122,3 +122,12 @@ export const LITURGICAL_COLORS = [
   { value: 'red', label: 'Red' },
   { value: 'black', label: 'Black' },
 ];
+
+export const MEMBER_ATTENDANCE_STATUSES = [
+  { value: 'present', label: 'Present' },
+  { value: 'late', label: 'Late' },
+  { value: 'absent', label: 'Absent' },
+  { value: 'excused', label: 'Excused' },
+  { value: 'upcoming', label: 'Upcoming' },
+  { value: 'unmarked', label: 'Not marked' },
+];

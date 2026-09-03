@@ -3,22 +3,15 @@ import { ChangePasswordForm } from '../components/ChangePasswordForm.jsx';
 import { useAuth } from '../AuthContext.jsx';
 
 const memberLinks = [
-  { to: '/', label: 'My attendance', end: true },
+  { to: '/attendance', label: 'My attendance', end: true },
   { to: '/account', label: 'Account' },
-];
-
-const adminLinks = [
-  { to: '/admin', label: 'Events', end: true },
-  { to: '/admin/attendance', label: 'Take attendance' },
-  { to: '/admin/members', label: 'Members' },
-  { to: '/admin/account', label: 'Account' },
 ];
 
 export function Account({ admin = false }) {
   const { user } = useAuth();
 
-  return (
-    <Shell links={admin ? adminLinks : memberLinks}>
+  const content = (
+    <>
       <section className="page-head">
         <div>
           <p className="eyebrow">Account</p>
@@ -30,6 +23,12 @@ export function Account({ admin = false }) {
         </div>
       </section>
       <ChangePasswordForm />
-    </Shell>
+    </>
   );
+
+  if (admin) {
+    return content;
+  }
+
+  return <Shell links={memberLinks}>{content}</Shell>;
 }

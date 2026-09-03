@@ -1,21 +1,12 @@
 import { useEffect, useState } from 'react';
-import { api, formatDate, formatEventType, toDateInput } from '../api.js';
+import { api, formatDate, formatEventType } from '../api.js';
 import { Shell } from '../components/Shell.jsx';
 import { StatusBadge } from '../components/StatusBadge.jsx';
 import { LiturgicalColorBadge } from '../components/LiturgicalColorBadge.jsx';
 import { Pagination } from '../components/Pagination.jsx';
+import { DateRangeFilters } from '../components/DateRangeFilters.jsx';
 import { useAuth } from '../AuthContext.jsx';
 import { PAGE_SIZE_OPTIONS } from '../utils/pagination.js';
-
-function daysAgo(days) {
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  return date;
-}
-
-function yearStart() {
-  return new Date(new Date().getFullYear(), 0, 1);
-}
 
 export function MemberHome() {
   const { user, setUser } = useAuth();
@@ -23,10 +14,23 @@ export function MemberHome() {
   const [error, setError] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
-  const [applied, setApplied] = useState({ from: '', to: '' });
+  const [searchDraft, setSearchDraft] = useState('');
+  const [search, setSearch] = useState('');
+  const [type, setType] = useState('');
+  const [liturgicalColor, setLiturgicalColor] = useState('');
+  const [status, setStatus] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
   const pending = user.approvalStatus === 'pending';
+  const filtersActive = Boolean(from || to || search || type || liturgicalColor || status);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchDraft);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchDraft]);
 
   useEffect(() => {
     if (!pending) return undefined;
@@ -44,8 +48,12 @@ export function MemberHome() {
       return undefined;
     }
     const params = new URLSearchParams();
-    if (applied.from) params.set('from', applied.from);
-    if (applied.to) params.set('to', applied.to);
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    if (search.trim()) params.set('search', search.trim());
+    if (type) params.set('type', type);
+    if (liturgicalColor) params.set('liturgicalColor', liturgicalColor);
+    if (status) params.set('status', status);
     params.set('page', String(page));
     params.set('limit', String(pageSize));
     const query = params.toString();
@@ -58,38 +66,64 @@ export function MemberHome() {
       })
       .catch((err) => setError(err.message));
     return undefined;
-  }, [pending, applied.from, applied.to, page, pageSize]);
+  }, [pending, from, to, search, type, liturgicalColor, status, page, pageSize]);
 
-  function applyRange(nextFrom = from, nextTo = to) {
+  function applyRange(nextFrom, nextTo) {
     setError('');
     setFrom(nextFrom);
     setTo(nextTo);
-    setApplied({ from: nextFrom, to: nextTo });
     setPage(1);
   }
 
-  function handlePageSizeChange(nextPageSize) {
-    setPageSize(nextPageSize);
+  function handleFromChange(value) {
+    setError('');
+    setFrom(value);
     setPage(1);
   }
 
-  function onFilter(event) {
-    event.preventDefault();
-    applyRange(from, to);
+  function handleToChange(value) {
+    setError('');
+    setTo(value);
+    setPage(1);
   }
 
-  const filtered = Boolean(applied.from || applied.to);
+  function clearFilters() {
+    setSearchDraft('');
+    setSearch('');
+    setType('');
+    setLiturgicalColor('');
+    setStatus('');
+    applyRange('', '');
+  }
+
+  function handleTypeChange(value) {
+    setError('');
+    setType(value);
+    setPage(1);
+  }
+
+  function handleLiturgicalColorChange(value) {
+    setError('');
+    setLiturgicalColor(value);
+    setPage(1);
+  }
+
+  function handleStatusChange(value) {
+    setError('');
+    setStatus(value);
+    setPage(1);
+  }
 
   return (
     <Shell
       links={[
-        { to: '/', label: 'My attendance', end: true },
+        { to: '/attendance', label: 'My attendance', end: true },
         { to: '/account', label: 'Account' },
       ]}
     >
       <section className="page-head">
         <div>
-          <p className="eyebrow">Welcome back</p>
+          <p className="eyebrow">My attendance</p>
           <h1>{user.name}</h1>
           <p className="lede">
             {pending
@@ -111,40 +145,6 @@ export function MemberHome() {
         </div>
       ) : data ? (
         <>
-          <form className="card form grid-form" onSubmit={onFilter}>
-            <h2 className="span-2">Filter by date</h2>
-            <label>
-              From
-              <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-            </label>
-            <label>
-              To
-              <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-            </label>
-            <div className="row-actions span-2">
-              <button type="submit">Apply</button>
-              <button
-                type="button"
-                className="ghost"
-                onClick={() => applyRange('', '')}
-                disabled={!filtered && !from && !to}
-              >
-                Clear
-              </button>
-            </div>
-            <div className="preset-row span-2">
-              <button type="button" className="ghost" onClick={() => applyRange(toDateInput(daysAgo(30)), toDateInput(new Date()))}>
-                Last 30 days
-              </button>
-              <button type="button" className="ghost" onClick={() => applyRange(toDateInput(daysAgo(90)), toDateInput(new Date()))}>
-                Last 3 months
-              </button>
-              <button type="button" className="ghost" onClick={() => applyRange(toDateInput(yearStart()), toDateInput(new Date()))}>
-                This year
-              </button>
-            </div>
-          </form>
-
           <div className="stats">
             <article className="stat">
               <strong>{data.summary.rate}%</strong>
@@ -164,15 +164,37 @@ export function MemberHome() {
             </article>
           </div>
 
-          <div className="card">
+          <div className="card attendance-history-card">
             <h2>Your history</h2>
-            <p className="muted">
-              {filtered
-                ? `${data.pagination.total} event${data.pagination.total === 1 ? '' : 's'} from ${applied.from || 'the beginning'} to ${applied.to || 'today'}.`
-                : `${data.pagination.total} recorded event${data.pagination.total === 1 ? '' : 's'}. Choose dates above to narrow the list.`}
+
+            <DateRangeFilters
+              showSearch
+              showEventFilters
+              searchDraft={searchDraft}
+              onSearchChange={setSearchDraft}
+              type={type}
+              onTypeChange={handleTypeChange}
+              liturgicalColor={liturgicalColor}
+              onLiturgicalColorChange={handleLiturgicalColorChange}
+              status={status}
+              onStatusChange={handleStatusChange}
+              from={from}
+              to={to}
+              filtersActive={filtersActive}
+              onFromChange={handleFromChange}
+              onToChange={handleToChange}
+              onClear={clearFilters}
+              onApplyRange={applyRange}
+            />
+
+            <p className="muted filter-summary">
+              {data.pagination.total} of {data.meta?.totalUnfiltered ?? data.pagination.total} event
+              {data.pagination.total === 1 ? '' : 's'} match
+              {filtersActive ? ' these filters' : ''}
             </p>
+
             {data.pagination.total === 0 ? (
-              <p className="muted">No events in this date range.</p>
+              <p className="muted">No events match these filters.</p>
             ) : (
               <>
                 <table>
@@ -181,7 +203,7 @@ export function MemberHome() {
                       <th>Date</th>
                       <th>Event</th>
                       <th>Type</th>
-                      <th>Colour</th>
+                      <th>Liturgical color</th>
                       <th>Status</th>
                       <th>Notes</th>
                     </tr>
@@ -214,7 +236,10 @@ export function MemberHome() {
                   hasPrevious={data.pagination.hasPrevious}
                   hasNext={data.pagination.hasNext}
                   onPageChange={setPage}
-                  onPageSizeChange={handlePageSizeChange}
+                  onPageSizeChange={(nextPageSize) => {
+                    setPageSize(nextPageSize);
+                    setPage(1);
+                  }}
                   itemLabel="events"
                 />
               </>

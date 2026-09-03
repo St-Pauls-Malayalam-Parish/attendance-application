@@ -298,7 +298,7 @@ export function AdminMembers() {
     <>
       <section className="page-head">
         <div>
-          <p className="eyebrow">Admin</p>
+          <p className="eyebrow">Members</p>
           <h1>Choir members</h1>
           <p className="lede">
             Approve new sign-ups, edit roster details, filter members, and review attendance rates

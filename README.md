@@ -6,10 +6,12 @@ React frontend for the parish choir attendance app.
 
 **Live site:** [https://st-pauls-malayalam-parish.github.io/attendance-application/](https://st-pauls-malayalam-parish.github.io/attendance-application/)
 
+**API:** [St-Pauls-Malayalam-Parish/attendance-server](https://github.com/St-Pauls-Malayalam-Parish/attendance-server)
+
 ## Requirements
 
 - Node.js 18+
-- API server running locally or hosted (set `VITE_API_URL` for production)
+- API server ([attendance-server](https://github.com/St-Pauls-Malayalam-Parish/attendance-server)) running locally or hosted
 
 ## Setup
 
@@ -47,7 +49,7 @@ This repo deploys automatically on every push to `main` via [GitHub Actions](.gi
 2. Under **Build and deployment**, set **Source** to **GitHub Actions**
 3. _(When API is hosted)_ Go to **Settings → Secrets and variables → Actions → Variables** and add:
    - Name: `VITE_API_URL`
-   - Value: your API URL, e.g. `https://st-pauls-malayalam-choir-attendance.onrender.com`
+   - Value: your API URL, e.g. `https://st-pauls-malayalam-choir-attendance.onrender.com` (your Render service URL — unchanged if you only renamed the GitHub repo)
 
 ### Git remote
 

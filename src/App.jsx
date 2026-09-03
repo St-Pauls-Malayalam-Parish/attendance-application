@@ -7,6 +7,7 @@ import { AdminHome } from './pages/AdminHome.jsx';
 import { AdminEvents } from './pages/AdminEvents.jsx';
 import { AdminAttendance } from './pages/AdminAttendance.jsx';
 import { AdminMembers } from './pages/AdminMembers.jsx';
+import { Account } from './pages/Account.jsx';
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
       <Route path="/register" element={<Register />} />
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<MemberHome />} />
+        <Route path="/account" element={<Account />} />
       </Route>
       <Route element={<ProtectedRoute adminOnly />}>
         <Route path="/admin" element={<AdminHome />}>
@@ -22,6 +24,7 @@ export default function App() {
           <Route path="attendance" element={<AdminAttendance />} />
           <Route path="attendance/:eventId" element={<AdminAttendance />} />
           <Route path="members" element={<AdminMembers />} />
+          <Route path="account" element={<Account admin />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

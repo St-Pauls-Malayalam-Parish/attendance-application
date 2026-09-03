@@ -63,7 +63,12 @@ export function MemberHome() {
   const filtered = Boolean(applied.from || applied.to);
 
   return (
-    <Shell links={[{ to: '/', label: 'My attendance', end: true }]}>
+    <Shell
+      links={[
+        { to: '/', label: 'My attendance', end: true },
+        { to: '/account', label: 'Account' },
+      ]}
+    >
       <section className="page-head">
         <div>
           <p className="eyebrow">Welcome back</p>

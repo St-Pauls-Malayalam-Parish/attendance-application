@@ -169,8 +169,8 @@ export function AdminMembers() {
           <p className="eyebrow">Admin</p>
           <h1>Choir members</h1>
           <p className="lede">
-            Approve new sign-ups, edit roster details, deactivate members (they cannot sign in but
-            attendance history is kept), or delete permanently.
+            Approve new sign-ups, edit roster details, reset a member&apos;s password when editing,
+            deactivate members, or delete permanently.
           </p>
         </div>
       </section>
@@ -249,14 +249,15 @@ export function AdminMembers() {
           />
         </label>
         <label>
-          {editingId ? 'New password (optional)' : 'Temporary password'}
+          {editingId ? 'Reset password (optional)' : 'Temporary password'}
           <input
-            type="text"
+            type="password"
             minLength={editingId ? undefined : 8}
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
             required={!editingId}
             placeholder={editingId ? 'Leave blank to keep current password' : ''}
+            autoComplete={editingId ? 'new-password' : 'off'}
           />
         </label>
         <label>

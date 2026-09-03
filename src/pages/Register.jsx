@@ -39,11 +39,11 @@ export function Register() {
   }
 
   return (
-    <AuthLayout
-      title="Join the choir roster"
-      lede="You can create an account now. A choir admin must approve it before you appear on the roster or see attendance."
-    >
-      <form onSubmit={onSubmit} className="card form">
+    <AuthLayout title="Create account">
+      <form onSubmit={onSubmit} className="card form auth-form">
+        <p className="auth-form-intro">
+          Register now. A choir admin will approve your account before you appear on the roster.
+        </p>
         {error ? <p className="alert">{error}</p> : null}
         <label>
           Full name
@@ -92,13 +92,13 @@ export function Register() {
             ))}
           </select>
         </label>
-        <button type="submit" disabled={busy}>
+        <button type="submit" className="auth-submit" disabled={busy}>
           {busy ? 'Creating…' : 'Create account'}
         </button>
-        <p className="muted">
-          Already have an account? <Link to="/login">Sign in</Link>
-        </p>
       </form>
+      <p className="auth-footer muted">
+        Already have an account? <Link to="/login">Sign in</Link>
+      </p>
     </AuthLayout>
   );
 }

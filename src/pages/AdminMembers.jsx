@@ -1,5 +1,13 @@
-import { useEffect, useState } from 'react';
-import { api, VOICE_PARTS } from '../api.js';
+import { useEffect, useMemo, useState } from 'react';
+import { api, VOICE_PARTS, toDateInput } from '../api.js';
+import { ConfirmDialog } from '../components/ConfirmDialog.jsx';
+import { Pagination } from '../components/Pagination.jsx';
+import {
+  emptyMemberFilters,
+  memberFiltersAreActive,
+  memberFiltersToParams,
+} from '../utils/member-filters.js';
+import { PAGE_SIZE_OPTIONS } from '../utils/pagination.js';
 
 const emptyForm = {
   name: '',
@@ -8,6 +16,27 @@ const emptyForm = {
   password: '',
   voicePart: 'other',
 };
+
+const emptyPagination = () => ({
+  page: 1,
+  pageSize: 10,
+  total: 0,
+  totalPages: 1,
+  rangeStart: 0,
+  rangeEnd: 0,
+  hasPrevious: false,
+  hasNext: false,
+});
+
+function daysAgo(days) {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  return date;
+}
+
+function yearStart() {
+  return new Date(new Date().getFullYear(), 0, 1);
+}
 
 function MemberActions({ member, onEdit, onSetActive, onDelete }) {
   return (
@@ -36,23 +65,97 @@ export function AdminMembers() {
   const [members, setMembers] = useState([]);
   const [inactive, setInactive] = useState([]);
   const [declined, setDeclined] = useState([]);
+  const [pagination, setPagination] = useState(emptyPagination);
+  const [totalUnfiltered, setTotalUnfiltered] = useState(0);
+  const [attendanceMeta, setAttendanceMeta] = useState({ dateFiltered: false, from: '', to: '' });
+  const [filters, setFilters] = useState(emptyMemberFilters);
+  const [searchDraft, setSearchDraft] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
+  const [loadingRoster, setLoadingRoster] = useState(true);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState('');
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
 
-  async function load() {
+  const filtersActive = useMemo(() => memberFiltersAreActive(filters), [filters]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setFilters((current) => ({ ...current, search: searchDraft }));
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchDraft]);
+
+  async function loadLists() {
     const data = await api('/api/members');
     setPending(data.pending);
-    setMembers(data.members);
     setInactive(data.inactive);
     setDeclined(data.declined);
   }
 
+  async function loadRoster(nextPage = page, nextPageSize = pageSize, nextFilters = filters) {
+    const params = memberFiltersToParams(nextFilters, { page: nextPage, pageSize: nextPageSize });
+    const data = await api(`/api/members/roster?${params}`);
+    setMembers(data.members);
+    setPagination(data.pagination);
+    setTotalUnfiltered(data.meta.totalUnfiltered);
+    setAttendanceMeta({
+      dateFiltered: data.meta.dateFiltered,
+      from: data.meta.from,
+      to: data.meta.to,
+    });
+    if (data.pagination.page !== nextPage) {
+      setPage(data.pagination.page);
+    }
+  }
+
+  async function refreshAll() {
+    await Promise.all([loadLists(), loadRoster()]);
+  }
+
   useEffect(() => {
-    load().catch((err) => setError(err.message));
+    loadLists().catch((err) => setError(err.message));
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingRoster(true);
+    loadRoster(page, pageSize, filters)
+      .catch((err) => {
+        if (!cancelled) setError(err.message);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingRoster(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [page, pageSize, filters]);
+
+  function updateFilter(key, value) {
+    if (key === 'search') {
+      setSearchDraft(value);
+      return;
+    }
+    setFilters((current) => ({ ...current, [key]: value }));
+    setPage(1);
+  }
+
+  function clearFilters() {
+    setSearchDraft('');
+    setFilters(emptyMemberFilters());
+    setPage(1);
+  }
+
+  function handlePageSizeChange(nextPageSize) {
+    setPageSize(nextPageSize);
+    setPage(1);
+  }
 
   function startEdit(member) {
     setError('');
@@ -97,7 +200,7 @@ export function AdminMembers() {
         setForm(emptyForm);
         setSaved('Member added');
       }
-      await load();
+      await refreshAll();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -113,54 +216,83 @@ export function AdminMembers() {
         method: 'PATCH',
         body: { approvalStatus },
       });
-      await load();
+      await refreshAll();
     } catch (err) {
       setError(err.message);
     }
   }
 
-  async function setActive(member, active) {
+  function requestSetActive(member, active) {
     setError('');
     setSaved('');
-    if (!window.confirm(`${active ? 'Reactivate' : 'Deactivate'} ${member.name}?`)) {
-      return;
-    }
+    setConfirmDialog({
+      title: active ? `Reactivate ${member.name}?` : `Deactivate ${member.name}?`,
+      description: active
+        ? 'They can sign in and appear on the roster again.'
+        : 'They will be hidden from attendance lists until you reactivate them.',
+      confirmLabel: active ? 'Reactivate' : 'Deactivate',
+      cancelLabel: 'Cancel',
+      danger: !active,
+      action: async () => {
+        await api(`/api/members/${member.id}/active`, {
+          method: 'PATCH',
+          body: { active },
+        });
+        if (editingId === member.id && !active) {
+          cancelEdit();
+        }
+        setSaved(active ? 'Member reactivated' : 'Member deactivated');
+        await refreshAll();
+      },
+    });
+  }
+
+  function requestRemoveMember(member) {
+    setError('');
+    setSaved('');
+    setConfirmDialog({
+      title: `Delete ${member.name} permanently?`,
+      description:
+        'This cannot be undone and removes all attendance records for this member.',
+      confirmLabel: 'Delete permanently',
+      cancelLabel: 'Keep member',
+      danger: true,
+      action: async () => {
+        await api(`/api/members/${member.id}`, { method: 'DELETE' });
+        if (editingId === member.id) {
+          cancelEdit();
+        }
+        setSaved('Member deleted permanently');
+        await refreshAll();
+      },
+    });
+  }
+
+  async function handleConfirm() {
+    if (!confirmDialog?.action) return;
+    setConfirmBusy(true);
+    setError('');
     try {
-      await api(`/api/members/${member.id}/active`, {
-        method: 'PATCH',
-        body: { active },
-      });
-      if (editingId === member.id && !active) {
-        cancelEdit();
-      }
-      setSaved(active ? 'Member reactivated' : 'Member deactivated');
-      await load();
+      await confirmDialog.action();
+      setConfirmDialog(null);
     } catch (err) {
       setError(err.message);
+    } finally {
+      setConfirmBusy(false);
     }
   }
 
-  async function removeMember(member) {
-    setError('');
-    setSaved('');
-    if (
-      !window.confirm(
-        `Permanently delete ${member.name}? This cannot be undone and removes all their attendance records.`
-      )
-    ) {
-      return;
-    }
-    try {
-      await api(`/api/members/${member.id}`, { method: 'DELETE' });
-      if (editingId === member.id) {
-        cancelEdit();
-      }
-      setSaved('Member deleted permanently');
-      await load();
-    } catch (err) {
-      setError(err.message);
-    }
+  function setActive(member, active) {
+    requestSetActive(member, active);
   }
+
+  function removeMember(member) {
+    requestRemoveMember(member);
+  }
+
+  const attendanceRangeLabel = attendanceMeta.dateFiltered
+    ? `from ${attendanceMeta.from || 'the beginning'} to ${attendanceMeta.to || 'today'}`
+    : 'for all recorded events';
 
   return (
     <>
@@ -169,8 +301,8 @@ export function AdminMembers() {
           <p className="eyebrow">Admin</p>
           <h1>Choir members</h1>
           <p className="lede">
-            Approve new sign-ups, edit roster details, reset a member&apos;s password when editing,
-            deactivate members, or delete permanently.
+            Approve new sign-ups, edit roster details, filter members, and review attendance rates
+            for a date range.
           </p>
         </div>
       </section>
@@ -282,51 +414,165 @@ export function AdminMembers() {
         </div>
       </form>
 
-      <div className="card">
+      <div className="card members-card">
         <h2>Roster</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Username</th>
-              <th>Email</th>
-              <th>Voice</th>
-              <th>Rate</th>
-              <th>Present</th>
-              <th>Absent</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {members.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="muted">
-                  No active members on the roster.
-                </td>
-              </tr>
-            ) : (
-              members.map((member) => (
-                <tr key={member.id} className={editingId === member.id ? 'editing' : ''}>
-                  <td>{member.name}</td>
-                  <td>{member.username}</td>
-                  <td>{member.email}</td>
-                  <td className="capitalize">{member.voicePart}</td>
-                  <td>{member.summary.rate}%</td>
-                  <td>{member.summary.present}</td>
-                  <td>{member.summary.absent}</td>
-                  <td className="row-actions">
-                    <MemberActions
-                      member={member}
-                      onEdit={startEdit}
-                      onSetActive={setActive}
-                      onDelete={removeMember}
-                    />
-                  </td>
+
+        <form className="member-filters" onSubmit={(e) => e.preventDefault()}>
+          <label className="filter-field-wide">
+            Search
+            <input
+              type="search"
+              value={searchDraft}
+              onChange={(e) => updateFilter('search', e.target.value)}
+              placeholder="Search name, username, or email"
+            />
+          </label>
+
+          <div className="filter-row">
+            <label>
+              Voice part
+              <select value={filters.voicePart} onChange={(e) => updateFilter('voicePart', e.target.value)}>
+                <option value="">All voices</option>
+                {VOICE_PARTS.map((part) => (
+                  <option key={part.value} value={part.value}>
+                    {part.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              From
+              <input
+                type="date"
+                value={filters.from}
+                onChange={(e) => updateFilter('from', e.target.value)}
+              />
+            </label>
+            <label>
+              To
+              <input type="date" value={filters.to} onChange={(e) => updateFilter('to', e.target.value)} />
+            </label>
+            <div className="filter-actions">
+              <button type="button" className="ghost" onClick={clearFilters} disabled={!filtersActive}>
+                Clear filters
+              </button>
+            </div>
+          </div>
+
+          <div className="filter-presets">
+            <span className="filter-presets-label">Quick ranges</span>
+            <div className="preset-row">
+              <button
+                type="button"
+                className="ghost"
+                onClick={() => {
+                  setFilters((current) => ({
+                    ...current,
+                    from: toDateInput(daysAgo(30)),
+                    to: toDateInput(new Date()),
+                  }));
+                  setPage(1);
+                }}
+              >
+                Last 30 days
+              </button>
+              <button
+                type="button"
+                className="ghost"
+                onClick={() => {
+                  setFilters((current) => ({
+                    ...current,
+                    from: toDateInput(daysAgo(90)),
+                    to: toDateInput(new Date()),
+                  }));
+                  setPage(1);
+                }}
+              >
+                Last 3 months
+              </button>
+              <button
+                type="button"
+                className="ghost"
+                onClick={() => {
+                  setFilters((current) => ({
+                    ...current,
+                    from: toDateInput(yearStart()),
+                    to: toDateInput(new Date()),
+                  }));
+                  setPage(1);
+                }}
+              >
+                This year
+              </button>
+            </div>
+          </div>
+        </form>
+
+        <p className="muted filter-summary">
+          {pagination.total} of {totalUnfiltered} member{pagination.total === 1 ? '' : 's'} match
+          {filtersActive ? ' these filters' : ''}. Attendance calculated {attendanceRangeLabel}.
+        </p>
+
+        {loadingRoster ? (
+          <p className="muted">Loading roster…</p>
+        ) : pagination.total === 0 ? (
+          <p className="muted">No members match these filters.</p>
+        ) : (
+          <>
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Username</th>
+                  <th>Email</th>
+                  <th>Voice</th>
+                  <th>Percentage</th>
+                  <th>Present</th>
+                  <th>Late</th>
+                  <th>Absent</th>
+                  <th></th>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              </thead>
+              <tbody>
+                {members.map((member) => (
+                  <tr key={member.id} className={editingId === member.id ? 'editing' : ''}>
+                    <td>{member.name}</td>
+                    <td>{member.username}</td>
+                    <td>{member.email}</td>
+                    <td className="capitalize">{member.voicePart}</td>
+                    <td>{member.summary.rate}%</td>
+                    <td>{member.summary.present}</td>
+                    <td>{member.summary.late}</td>
+                    <td>{member.summary.absent}</td>
+                    <td className="row-actions">
+                      <MemberActions
+                        member={member}
+                        onEdit={startEdit}
+                        onSetActive={setActive}
+                        onDelete={removeMember}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <Pagination
+              page={pagination.page}
+              pageSize={pagination.pageSize}
+              totalItems={pagination.total}
+              totalPages={pagination.totalPages}
+              rangeStart={pagination.rangeStart}
+              rangeEnd={pagination.rangeEnd}
+              hasPrevious={pagination.hasPrevious}
+              hasNext={pagination.hasNext}
+              onPageChange={setPage}
+              onPageSizeChange={handlePageSizeChange}
+              itemLabel="members"
+              disabled={loadingRoster}
+            />
+          </>
+        )}
       </div>
 
       {inactive.length > 0 ? (
@@ -403,6 +649,20 @@ export function AdminMembers() {
           </table>
         </div>
       ) : null}
+
+      <ConfirmDialog
+        open={confirmDialog !== null}
+        onOpenChange={(open) => {
+          if (!open && !confirmBusy) setConfirmDialog(null);
+        }}
+        title={confirmDialog?.title ?? ''}
+        description={confirmDialog?.description ?? ''}
+        confirmLabel={confirmDialog?.confirmLabel ?? 'Confirm'}
+        cancelLabel={confirmDialog?.cancelLabel ?? 'Cancel'}
+        danger={confirmDialog?.danger ?? false}
+        busy={confirmBusy}
+        onConfirm={handleConfirm}
+      />
     </>
   );
 }

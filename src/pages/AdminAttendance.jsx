@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { api, formatDate } from '../api.js';
+import { api, formatDate, formatEventType } from '../api.js';
+import { LiturgicalColorBadge } from '../components/LiturgicalColorBadge.jsx';
+import { Pagination } from '../components/Pagination.jsx';
 
 const STATUSES = [
   { value: 'present', label: 'Present' },
@@ -9,10 +11,23 @@ const STATUSES = [
   { value: 'excused', label: 'Excused' },
 ];
 
+const EVENT_PAGE_SIZE = 20;
+
 export function AdminAttendance() {
   const { eventId } = useParams();
   const navigate = useNavigate();
-  const [events, setEvents] = useState([]);
+  const [eventOptions, setEventOptions] = useState([]);
+  const [eventSearch, setEventSearch] = useState('');
+  const [eventPage, setEventPage] = useState(1);
+  const [eventPagination, setEventPagination] = useState({
+    total: 0,
+    totalPages: 1,
+    hasPrevious: false,
+    hasNext: false,
+    rangeStart: 0,
+    rangeEnd: 0,
+  });
+  const [loadingEvents, setLoadingEvents] = useState(true);
   const [roster, setRoster] = useState([]);
   const [event, setEvent] = useState(null);
   const [error, setError] = useState('');
@@ -20,10 +35,38 @@ export function AdminAttendance() {
   const [saved, setSaved] = useState('');
 
   useEffect(() => {
-    api('/api/events')
-      .then((data) => setEvents(data.events))
-      .catch((err) => setError(err.message));
-  }, []);
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      setLoadingEvents(true);
+      const params = new URLSearchParams({
+        page: String(eventPage),
+        limit: String(EVENT_PAGE_SIZE),
+      });
+      if (eventSearch.trim()) {
+        params.set('search', eventSearch.trim());
+      }
+      api(`/api/events?${params}`)
+        .then((data) => {
+          if (cancelled) return;
+          setEventOptions(data.events);
+          setEventPagination(data.pagination);
+          if (data.pagination.page !== eventPage) {
+            setEventPage(data.pagination.page);
+          }
+        })
+        .catch((err) => {
+          if (!cancelled) setError(err.message);
+        })
+        .finally(() => {
+          if (!cancelled) setLoadingEvents(false);
+        });
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [eventSearch, eventPage]);
 
   useEffect(() => {
     if (!eventId) {
@@ -39,6 +82,12 @@ export function AdminAttendance() {
       })
       .catch((err) => setError(err.message));
   }, [eventId]);
+
+  const selectOptions = useMemo(() => {
+    if (!event) return eventOptions;
+    if (eventOptions.some((item) => item.id === event.id)) return eventOptions;
+    return [event, ...eventOptions];
+  }, [event, eventOptions]);
 
   function updateRow(memberId, patch) {
     setRoster((current) =>
@@ -82,20 +131,60 @@ export function AdminAttendance() {
 
       {error ? <p className="alert">{error}</p> : null}
 
-      <label className="card picker">
-        Choose an event
-        <select
-          value={eventId || ''}
-          onChange={(e) => navigate(e.target.value ? `/admin/attendance/${e.target.value}` : '/admin/attendance')}
-        >
-          <option value="">Select a rehearsal or service</option>
-          {events.map((item) => (
-            <option key={item.id} value={item.id}>
-              {formatDate(item.date)} — {item.title}
+      <div className="card event-picker">
+        <label>
+          Search events
+          <input
+            type="search"
+            value={eventSearch}
+            onChange={(e) => {
+              setEventSearch(e.target.value);
+              setEventPage(1);
+            }}
+            placeholder="Search by title or notes"
+          />
+        </label>
+
+        <label>
+          Choose an event
+          <select
+            value={eventId || ''}
+            onChange={(e) =>
+              navigate(e.target.value ? `/admin/attendance/${e.target.value}` : '/admin/attendance')
+            }
+            disabled={loadingEvents}
+          >
+            <option value="">
+              {loadingEvents ? 'Loading events…' : 'Select a practice or service'}
             </option>
-          ))}
-        </select>
-      </label>
+            {selectOptions.map((item) => (
+              <option key={item.id} value={item.id}>
+                {formatDate(item.date)} — {item.title}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {eventPagination.total > 0 ? (
+          <Pagination
+            page={eventPagination.page}
+            pageSize={EVENT_PAGE_SIZE}
+            totalItems={eventPagination.total}
+            totalPages={eventPagination.totalPages}
+            rangeStart={eventPagination.rangeStart}
+            rangeEnd={eventPagination.rangeEnd}
+            hasPrevious={eventPagination.hasPrevious}
+            hasNext={eventPagination.hasNext}
+            onPageChange={setEventPage}
+            onPageSizeChange={() => {}}
+            showPageSize={false}
+            itemLabel="events"
+            disabled={loadingEvents}
+          />
+        ) : !loadingEvents ? (
+          <p className="muted">No events match your search.</p>
+        ) : null}
+      </div>
 
       {event ? (
         <div className="card attendance-card">
@@ -103,7 +192,13 @@ export function AdminAttendance() {
             <div>
               <h2>{event.title}</h2>
               <p className="muted">
-                {formatDate(event.date)} · {event.type}
+                {formatDate(event.date)} · {formatEventType(event.type)}
+                {event.liturgicalColor ? (
+                  <>
+                    {' · '}
+                    <LiturgicalColorBadge color={event.liturgicalColor} />
+                  </>
+                ) : null}
               </p>
             </div>
             <button type="button" onClick={save} disabled={busy}>

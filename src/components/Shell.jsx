@@ -11,7 +11,7 @@ export function Shell({ children, links }) {
         <div className="brand">
           <img src={publicUrl('csi-logo.png')} alt="Church of South India" className="brand-logo" />
           <div>
-            <strong>St Paul's Malayalam Parish</strong>
+            <strong>St Pauls Malayalam Parish, Pune</strong>
             <p>Choir attendance</p>
           </div>
         </div>

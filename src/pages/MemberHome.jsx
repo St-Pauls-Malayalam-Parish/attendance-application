@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
-import { api, formatDate, toDateInput } from '../api.js';
+import { api, formatDate, formatEventType, toDateInput } from '../api.js';
 import { Shell } from '../components/Shell.jsx';
 import { StatusBadge } from '../components/StatusBadge.jsx';
+import { LiturgicalColorBadge } from '../components/LiturgicalColorBadge.jsx';
+import { Pagination } from '../components/Pagination.jsx';
 import { useAuth } from '../AuthContext.jsx';
+import { PAGE_SIZE_OPTIONS } from '../utils/pagination.js';
 
 function daysAgo(days) {
   const date = new Date();
@@ -21,6 +24,8 @@ export function MemberHome() {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [applied, setApplied] = useState({ from: '', to: '' });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
   const pending = user.approvalStatus === 'pending';
 
   useEffect(() => {
@@ -41,18 +46,31 @@ export function MemberHome() {
     const params = new URLSearchParams();
     if (applied.from) params.set('from', applied.from);
     if (applied.to) params.set('to', applied.to);
+    params.set('page', String(page));
+    params.set('limit', String(pageSize));
     const query = params.toString();
-    api(`/api/attendance/me${query ? `?${query}` : ''}`)
-      .then(setData)
+    api(`/api/attendance/me?${query}`)
+      .then((result) => {
+        setData(result);
+        if (result.pagination?.page && result.pagination.page !== page) {
+          setPage(result.pagination.page);
+        }
+      })
       .catch((err) => setError(err.message));
     return undefined;
-  }, [pending, applied.from, applied.to]);
+  }, [pending, applied.from, applied.to, page, pageSize]);
 
   function applyRange(nextFrom = from, nextTo = to) {
     setError('');
     setFrom(nextFrom);
     setTo(nextTo);
     setApplied({ from: nextFrom, to: nextTo });
+    setPage(1);
+  }
+
+  function handlePageSizeChange(nextPageSize) {
+    setPageSize(nextPageSize);
+    setPage(1);
   }
 
   function onFilter(event) {
@@ -150,36 +168,56 @@ export function MemberHome() {
             <h2>Your history</h2>
             <p className="muted">
               {filtered
-                ? `Showing ${data.history.length} event${data.history.length === 1 ? '' : 's'} from ${applied.from || 'the beginning'} to ${applied.to || 'today'}.`
-                : 'Showing all recorded events. Choose dates above to narrow the list.'}
+                ? `${data.pagination.total} event${data.pagination.total === 1 ? '' : 's'} from ${applied.from || 'the beginning'} to ${applied.to || 'today'}.`
+                : `${data.pagination.total} recorded event${data.pagination.total === 1 ? '' : 's'}. Choose dates above to narrow the list.`}
             </p>
-            {data.history.length === 0 ? (
+            {data.pagination.total === 0 ? (
               <p className="muted">No events in this date range.</p>
             ) : (
-              <table>
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Event</th>
-                    <th>Type</th>
-                    <th>Status</th>
-                    <th>Notes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.history.map((row) => (
-                    <tr key={row.event.id}>
-                      <td>{formatDate(row.event.date)}</td>
-                      <td>{row.event.title}</td>
-                      <td className="capitalize">{row.event.type}</td>
-                      <td>
-                        <StatusBadge status={row.status} />
-                      </td>
-                      <td className="notes-cell">{row.notes || '—'}</td>
+              <>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Event</th>
+                      <th>Type</th>
+                      <th>Colour</th>
+                      <th>Status</th>
+                      <th>Notes</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {data.history.map((row) => (
+                      <tr key={row.event.id}>
+                        <td>{formatDate(row.event.date)}</td>
+                        <td>{row.event.title}</td>
+                        <td>{formatEventType(row.event.type)}</td>
+                        <td>
+                          <LiturgicalColorBadge color={row.event.liturgicalColor} />
+                        </td>
+                        <td>
+                          <StatusBadge status={row.status} />
+                        </td>
+                        <td className="notes-cell">{row.notes || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                <Pagination
+                  page={data.pagination.page}
+                  pageSize={data.pagination.pageSize}
+                  totalItems={data.pagination.total}
+                  totalPages={data.pagination.totalPages}
+                  rangeStart={data.pagination.rangeStart}
+                  rangeEnd={data.pagination.rangeEnd}
+                  hasPrevious={data.pagination.hasPrevious}
+                  hasNext={data.pagination.hasNext}
+                  onPageChange={setPage}
+                  onPageSizeChange={handlePageSizeChange}
+                  itemLabel="events"
+                />
+              </>
             )}
           </div>
         </>

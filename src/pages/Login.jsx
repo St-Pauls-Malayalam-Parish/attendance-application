@@ -36,11 +36,12 @@ export function Login() {
   }
 
   return (
-    <AuthLayout
-      title="Sign in to see your attendance"
-      lede="Each singer can view only their own record after a choir admin approves the account."
-    >
-      <form onSubmit={onSubmit} className="card form">
+    <AuthLayout title="Sign in">
+      <form onSubmit={onSubmit} className="card form auth-form">
+        <p className="auth-form-intro">
+          Use your parish username. Each singer sees only their own attendance after a choir admin
+          approves the account.
+        </p>
         {sessionExpired ? (
           <p className="alert">Your session expired. Please sign in again.</p>
         ) : null}
@@ -65,13 +66,13 @@ export function Login() {
             required
           />
         </label>
-        <button type="submit" disabled={busy}>
+        <button type="submit" className="auth-submit" disabled={busy}>
           {busy ? 'Signing in…' : 'Sign in'}
         </button>
-        <p className="muted">
-          New to the choir? <Link to="/register">Create an account</Link>
-        </p>
       </form>
+      <p className="auth-footer muted">
+        New to the choir? <Link to="/register">Create an account</Link>
+      </p>
     </AuthLayout>
   );
 }

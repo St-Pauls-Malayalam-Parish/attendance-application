@@ -102,8 +102,23 @@ export const VOICE_PARTS = [
 ];
 
 export const EVENT_TYPES = [
-  { value: 'rehearsal', label: 'Rehearsal' },
+  { value: 'practice', label: 'Practice' },
   { value: 'service', label: 'Service' },
   { value: 'concert', label: 'Concert' },
   { value: 'other', label: 'Other' },
+];
+
+export function formatEventType(type) {
+  if (type === 'rehearsal') return 'Practice';
+  if (!type) return '—';
+  return type.charAt(0).toUpperCase() + type.slice(1);
+}
+
+export const LITURGICAL_COLORS = [
+  { value: '', label: 'Not set' },
+  { value: 'white', label: 'White' },
+  { value: 'green', label: 'Green' },
+  { value: 'purple', label: 'Purple' },
+  { value: 'red', label: 'Red' },
+  { value: 'black', label: 'Black' },
 ];

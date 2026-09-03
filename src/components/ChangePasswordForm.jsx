@@ -24,6 +24,7 @@ export function ChangePasswordForm() {
       await api('/api/auth/change-password', {
         method: 'POST',
         body: { currentPassword, newPassword },
+        skipAuthRedirect: true,
       });
       setCurrentPassword('');
       setNewPassword('');

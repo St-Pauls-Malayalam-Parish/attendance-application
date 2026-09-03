@@ -1,15 +1,17 @@
 import { useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { useAuth } from '../AuthContext.jsx';
 import { AuthLayout } from '../components/AuthLayout.jsx';
 
 export function Login() {
   const { user, setUser } = useAuth();
+  const [searchParams] = useSearchParams();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const sessionExpired = searchParams.get('session') === 'expired';
 
   if (user) {
     return <Navigate to={user.role === 'admin' ? '/admin' : '/'} replace />;
@@ -20,7 +22,11 @@ export function Login() {
     setBusy(true);
     setError('');
     try {
-      const data = await api('/api/auth/login', { method: 'POST', body: { username, password } });
+      const data = await api('/api/auth/login', {
+        method: 'POST',
+        body: { username, password },
+        skipAuthRedirect: true,
+      });
       setUser(data.user);
     } catch (err) {
       setError(err.message);
@@ -35,6 +41,9 @@ export function Login() {
       lede="Each singer can view only their own record after a choir admin approves the account."
     >
       <form onSubmit={onSubmit} className="card form">
+        {sessionExpired ? (
+          <p className="alert">Your session expired. Please sign in again.</p>
+        ) : null}
         {error ? <p className="alert">{error}</p> : null}
         <label>
           Username

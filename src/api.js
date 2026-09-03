@@ -1,6 +1,34 @@
 const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 const TOKEN_KEY = 'choir_auth_token';
 
+let onUnauthorized = null;
+
+export function setUnauthorizedHandler(handler) {
+  onUnauthorized = handler;
+}
+
+function isPublicAuthRoute() {
+  const path = window.location.hash.replace(/^#/, '') || '/';
+  return (
+    path === '/login' ||
+    path.startsWith('/login?') ||
+    path === '/register' ||
+    path.startsWith('/register?')
+  );
+}
+
+function redirectToLogin() {
+  if (!isPublicAuthRoute()) {
+    window.location.hash = '#/login?session=expired';
+  }
+}
+
+function handleUnauthorized() {
+  setAuthToken(null);
+  onUnauthorized?.();
+  redirectToLogin();
+}
+
 export function getAuthToken() {
   return localStorage.getItem(TOKEN_KEY);
 }
@@ -13,7 +41,7 @@ export function setAuthToken(token) {
   }
 }
 
-export async function api(path, { method = 'GET', body } = {}) {
+export async function api(path, { method = 'GET', body, skipAuthRedirect = false } = {}) {
   const headers = {};
   if (body) headers['Content-Type'] = 'application/json';
 
@@ -29,6 +57,9 @@ export async function api(path, { method = 'GET', body } = {}) {
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
+    if (response.status === 401 && !skipAuthRedirect) {
+      handleUnauthorized();
+    }
     throw new Error(data.error || 'Request failed');
   }
 

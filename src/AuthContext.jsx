@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { api, setAuthToken } from './api.js';
+import { api, setAuthToken, setUnauthorizedHandler } from './api.js';
 
 const AuthContext = createContext(null);
 
@@ -8,7 +8,12 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api('/api/auth/me')
+    setUnauthorizedHandler(() => setUser(null));
+    return () => setUnauthorizedHandler(null);
+  }, []);
+
+  useEffect(() => {
+    api('/api/auth/me', { skipAuthRedirect: true })
       .then((data) => setUser(data.user))
       .catch(() => setUser(null))
       .finally(() => setLoading(false));
@@ -21,7 +26,7 @@ export function AuthProvider({ children }) {
       setUser,
       async logout() {
         try {
-          await api('/api/auth/logout', { method: 'POST' });
+          await api('/api/auth/logout', { method: 'POST', skipAuthRedirect: true });
         } finally {
           setAuthToken(null);
           setUser(null);

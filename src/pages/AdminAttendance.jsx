@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, formatDate, formatEventType } from '../api.js';
 import { EventCard } from '../components/EventCard.jsx';
 import { EventFiltersForm } from '../components/EventFiltersForm.jsx';
+import { LiturgicalColorBadge } from '../components/LiturgicalColorBadge.jsx';
 import { Pagination } from '../components/Pagination.jsx';
 import {
   emptyEventFilters,

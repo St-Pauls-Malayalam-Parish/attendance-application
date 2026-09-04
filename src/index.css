@@ -412,12 +412,8 @@ select:focus-visible {
   backdrop-filter: blur(10px);
 }
 
-.brand strong.brand-title-short {
-  display: none;
-}
-
-.brand strong.brand-title-full {
-  display: block;
+.brand-text {
+  min-width: 0;
 }
 
 .brand {
@@ -1946,20 +1942,17 @@ button.confirm-danger:hover:not(:disabled) {
   .brand {
     flex: 1 1 auto;
     min-width: 0;
+    align-items: flex-start;
+  }
+
+  .brand-text strong {
+    font-size: clamp(0.82rem, 3.4vw, 0.98rem);
+    line-height: 1.2;
   }
 
   .brand p {
-    display: none;
-  }
-
-  .brand strong.brand-title-full {
-    display: none;
-  }
-
-  .brand strong.brand-title-short {
-    display: block;
-    font-size: 0.98rem;
-    line-height: 1.15;
+    font-size: 0.72rem;
+    line-height: 1.25;
   }
 
   .brand-logo {
@@ -1981,8 +1974,8 @@ button.confirm-danger:hover:not(:disabled) {
 
   .session-signout {
     min-height: 2.5rem;
-    padding: 0.5rem 0.85rem;
-    font-size: 0.88rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.82rem;
   }
 
   .bottom-nav {

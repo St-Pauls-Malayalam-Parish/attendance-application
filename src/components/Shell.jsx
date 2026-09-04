@@ -16,9 +16,8 @@ export function Shell({ children, links }) {
       <header className="topbar">
         <div className="brand">
           <img src={publicUrl('csi-logo.png')} alt="Church of South India" className="brand-logo" />
-          <div>
-            <strong className="brand-title-full">St Pauls Malayalam Parish, Pune</strong>
-            <strong className="brand-title-short">St Paul&apos;s Choir</strong>
+          <div className="brand-text">
+            <strong>St Pauls Malayalam Parish, Pune</strong>
             <p>Choir attendance</p>
           </div>
         </div>

@@ -8,6 +8,7 @@ import {
   memberFiltersToParams,
 } from '../utils/member-filters.js';
 import { PAGE_SIZE_OPTIONS } from '../utils/pagination.js';
+import { normalizeMembersLists, normalizeRosterList } from '../utils/api-data.js';
 
 const emptyForm = {
   name: '',
@@ -93,24 +94,22 @@ export function AdminMembers() {
 
   async function loadLists() {
     const data = await api('/api/members');
-    setPending(data.pending);
-    setInactive(data.inactive);
-    setDeclined(data.declined);
+    const normalized = normalizeMembersLists(data);
+    setPending(normalized.pending);
+    setInactive(normalized.inactive);
+    setDeclined(normalized.declined);
   }
 
   async function loadRoster(nextPage = page, nextPageSize = pageSize, nextFilters = filters) {
     const params = memberFiltersToParams(nextFilters, { page: nextPage, pageSize: nextPageSize });
     const data = await api(`/api/members/roster?${params}`);
-    setMembers(data.members);
-    setPagination(data.pagination);
-    setTotalUnfiltered(data.meta.totalUnfiltered);
-    setAttendanceMeta({
-      dateFiltered: data.meta.dateFiltered,
-      from: data.meta.from,
-      to: data.meta.to,
-    });
-    if (data.pagination.page !== nextPage) {
-      setPage(data.pagination.page);
+    const normalized = normalizeRosterList(data, nextPageSize);
+    setMembers(normalized.members);
+    setPagination(normalized.pagination);
+    setTotalUnfiltered(normalized.totalUnfiltered);
+    setAttendanceMeta(normalized.attendanceMeta);
+    if (normalized.pagination.page !== nextPage) {
+      setPage(normalized.pagination.page);
     }
   }
 

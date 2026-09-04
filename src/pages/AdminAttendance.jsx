@@ -6,6 +6,10 @@ import { EventFiltersForm } from '../components/EventFiltersForm.jsx';
 import { LiturgicalColorBadge } from '../components/LiturgicalColorBadge.jsx';
 import { Pagination } from '../components/Pagination.jsx';
 import {
+  normalizeAttendanceEvent,
+  normalizeEventsList,
+} from '../utils/api-data.js';
+import {
   emptyEventFilters,
   eventFiltersToParams,
   filtersAreActive,
@@ -57,7 +61,7 @@ export function AdminAttendance() {
   useEffect(() => {
     if (eventId) return undefined;
     api('/api/events/years')
-      .then((data) => setYears(data.years))
+      .then((data) => setYears(Array.isArray(data.years) ? data.years : []))
       .catch((err) => setError(err.message));
     return undefined;
   }, [eventId]);
@@ -72,11 +76,12 @@ export function AdminAttendance() {
     api(`/api/events?${params}`)
       .then((data) => {
         if (cancelled) return;
-        setEvents(data.events);
-        setEventPagination(data.pagination);
-        setTotalUnfiltered(data.meta.totalUnfiltered);
-        if (data.pagination.page !== eventPage) {
-          setEventPage(data.pagination.page);
+        const normalized = normalizeEventsList(data, EVENT_PAGE_SIZE);
+        setEvents(normalized.events);
+        setEventPagination(normalized.pagination);
+        setTotalUnfiltered(normalized.totalUnfiltered);
+        if (normalized.pagination.page !== eventPage) {
+          setEventPage(normalized.pagination.page);
         }
       })
       .catch((err) => {
@@ -102,8 +107,9 @@ export function AdminAttendance() {
     setError('');
     api(`/api/attendance/event/${eventId}`)
       .then((data) => {
-        setEvent(data.event);
-        setRoster(data.roster);
+        const normalized = normalizeAttendanceEvent(data);
+        setEvent(normalized.event);
+        setRoster(normalized.roster);
       })
       .catch((err) => setError(err.message));
 

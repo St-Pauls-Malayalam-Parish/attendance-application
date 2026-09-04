@@ -3,7 +3,7 @@ import { EVENT_TYPES, LITURGICAL_COLORS } from '../api.js';
 export function EventFiltersForm({
   searchDraft,
   filters,
-  years,
+  years = [],
   filtersActive,
   onSearchChange,
   onFilterChange,

@@ -7,6 +7,7 @@ import { Pagination } from '../components/Pagination.jsx';
 import { DateRangeFilters } from '../components/DateRangeFilters.jsx';
 import { useAuth } from '../AuthContext.jsx';
 import { PAGE_SIZE_OPTIONS } from '../utils/pagination.js';
+import { normalizeAttendanceMe } from '../utils/api-data.js';
 
 export function MemberHome() {
   const { user, setUser } = useAuth();
@@ -59,9 +60,10 @@ export function MemberHome() {
     const query = params.toString();
     api(`/api/attendance/me?${query}`)
       .then((result) => {
-        setData(result);
-        if (result.pagination?.page && result.pagination.page !== page) {
-          setPage(result.pagination.page);
+        const normalized = normalizeAttendanceMe(result);
+        setData(normalized);
+        if (normalized.pagination.page && normalized.pagination.page !== page) {
+          setPage(normalized.pagination.page);
         }
       })
       .catch((err) => setError(err.message));

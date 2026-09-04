@@ -14,6 +14,7 @@ import {
   filtersAreActive,
 } from '../utils/event-filters.js';
 import { formatMonthYear, monthFilterRange, startOfMonth } from '../utils/calendar.js';
+import { normalizeEventsList } from '../utils/api-data.js';
 import { PAGE_SIZE_OPTIONS } from '../utils/pagination.js';
 
 const CALENDAR_EVENT_LIMIT = 100;
@@ -75,7 +76,7 @@ export function AdminEvents() {
 
   async function loadYears() {
     const data = await api('/api/events/years');
-    setYears(data.years);
+    setYears(Array.isArray(data.years) ? data.years : []);
   }
 
   async function loadCalendarEvents(nextMonth = calendarMonth, nextFilters = filters) {
@@ -94,11 +95,12 @@ export function AdminEvents() {
     );
 
     const data = await api(`/api/events?${params}`);
-    setCalendarEvents(data.events);
-    setTotalUnfiltered(data.meta.totalUnfiltered);
-    setPagination((current) => ({ ...current, total: data.pagination.total }));
+    const normalized = normalizeEventsList(data, CALENDAR_EVENT_LIMIT);
+    setCalendarEvents(normalized.events);
+    setTotalUnfiltered(normalized.totalUnfiltered);
+    setPagination((current) => ({ ...current, total: normalized.pagination.total }));
     setSelectedCalendarEventId((current) =>
-      data.events.some((event) => event.id === current) ? current : null
+      normalized.events.some((event) => event.id === current) ? current : null
     );
     return data;
   }
@@ -106,11 +108,12 @@ export function AdminEvents() {
   async function loadEvents(nextPage = page, nextPageSize = pageSize, nextFilters = filters) {
     const params = eventFiltersToParams(nextFilters, { page: nextPage, pageSize: nextPageSize });
     const data = await api(`/api/events?${params}`);
-    setEvents(data.events);
-    setPagination(data.pagination);
-    setTotalUnfiltered(data.meta.totalUnfiltered);
-    if (data.pagination.page !== nextPage) {
-      setPage(data.pagination.page);
+    const normalized = normalizeEventsList(data, nextPageSize);
+    setEvents(normalized.events);
+    setPagination(normalized.pagination);
+    setTotalUnfiltered(normalized.totalUnfiltered);
+    if (normalized.pagination.page !== nextPage) {
+      setPage(normalized.pagination.page);
     }
     return data;
   }

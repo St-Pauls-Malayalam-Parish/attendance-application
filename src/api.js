@@ -1,11 +1,16 @@
 const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 const TOKEN_KEY = 'choir_auth_token';
+const REFRESH_TOKEN_KEY = 'choir_refresh_token';
+
+/** GitHub Pages → Render uses Bearer tokens; local dev uses httpOnly cookies via the Vite proxy. */
+export const usesBearerAuth = Boolean(API_BASE);
 
 export function getApiBase() {
   return API_BASE;
 }
 
 let onUnauthorized = null;
+let refreshPromise = null;
 
 export function setUnauthorizedHandler(handler) {
   onUnauthorized = handler;
@@ -28,16 +33,23 @@ function redirectToLogin() {
 }
 
 function handleUnauthorized() {
-  setAuthToken(null);
+  clearAuthTokens();
   onUnauthorized?.();
   redirectToLogin();
 }
 
 export function getAuthToken() {
+  if (!usesBearerAuth) return null;
   return localStorage.getItem(TOKEN_KEY);
 }
 
+export function getRefreshToken() {
+  if (!usesBearerAuth) return null;
+  return localStorage.getItem(REFRESH_TOKEN_KEY);
+}
+
 export function setAuthToken(token) {
+  if (!usesBearerAuth) return;
   if (token) {
     localStorage.setItem(TOKEN_KEY, token);
   } else {
@@ -45,21 +57,104 @@ export function setAuthToken(token) {
   }
 }
 
-export async function api(path, { method = 'GET', body, skipAuthRedirect = false } = {}) {
-  const headers = {};
-  if (body) headers['Content-Type'] = 'application/json';
+export function setRefreshToken(token) {
+  if (!usesBearerAuth) return;
+  if (token) {
+    localStorage.setItem(REFRESH_TOKEN_KEY, token);
+  } else {
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+  }
+}
 
-  const token = getAuthToken();
-  if (token) headers.Authorization = `Bearer ${token}`;
+export function clearAuthTokens() {
+  setAuthToken(null);
+  setRefreshToken(null);
+}
 
-  const response = await fetch(`${API_BASE}${path}`, {
+function storeAuthPayload(data) {
+  if (!usesBearerAuth) return;
+  if (data.token) {
+    setAuthToken(data.token);
+  }
+  if (data.refreshToken) {
+    setRefreshToken(data.refreshToken);
+  }
+}
+
+async function request(path, { method = 'GET', body, headers = {}, skipAuth = false } = {}) {
+  const requestHeaders = { ...headers };
+  if (body) {
+    requestHeaders['Content-Type'] = 'application/json';
+  }
+
+  if (usesBearerAuth) {
+    requestHeaders['X-Auth-Client'] = 'bearer';
+    if (!skipAuth) {
+      const token = getAuthToken();
+      if (token) {
+        requestHeaders.Authorization = `Bearer ${token}`;
+      }
+    }
+  }
+
+  return fetch(`${API_BASE}${path}`, {
     method,
     credentials: 'include',
-    headers: Object.keys(headers).length ? headers : undefined,
+    headers: Object.keys(requestHeaders).length ? requestHeaders : undefined,
     body: body ? JSON.stringify(body) : undefined,
   });
+}
 
-  const data = await response.json().catch(() => ({}));
+export async function refreshAccessToken() {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      const refreshToken = getRefreshToken();
+      const response = await request('/api/auth/refresh', {
+        method: 'POST',
+        body: refreshToken ? { refreshToken } : undefined,
+        skipAuth: true,
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || 'Session expired. Please sign in again.');
+      }
+
+      storeAuthPayload(data);
+      return data;
+    })().finally(() => {
+      refreshPromise = null;
+    });
+  }
+
+  return refreshPromise;
+}
+
+export async function api(
+  path,
+  { method = 'GET', body, skipAuthRedirect = false, retryOnUnauthorized = true } = {}
+) {
+  let response = await request(path, { method, body });
+  let data = await response.json().catch(() => ({}));
+
+  if (
+    response.status === 401 &&
+    retryOnUnauthorized &&
+    !skipAuthRedirect &&
+    path !== '/api/auth/refresh' &&
+    path !== '/api/auth/login' &&
+    path !== '/api/auth/register'
+  ) {
+    try {
+      await refreshAccessToken();
+      response = await request(path, { method, body });
+      data = await response.json().catch(() => ({}));
+    } catch {
+      handleUnauthorized();
+      throw new Error(data.error || 'Session expired. Please sign in again.');
+    }
+  }
+
   if (!response.ok) {
     if (response.status === 401 && !skipAuthRedirect) {
       handleUnauthorized();
@@ -67,10 +162,7 @@ export async function api(path, { method = 'GET', body, skipAuthRedirect = false
     throw new Error(data.error || 'Request failed');
   }
 
-  if (data.token) {
-    setAuthToken(data.token);
-  }
-
+  storeAuthPayload(data);
   return data;
 }
 

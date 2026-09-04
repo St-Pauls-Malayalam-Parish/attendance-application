@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { api, setAuthToken, setUnauthorizedHandler } from './api.js';
+import { api, clearAuthTokens, getRefreshToken, setUnauthorizedHandler } from './api.js';
 import { startBackendWarmup } from './utils/backend-health.js';
 
 const AuthContext = createContext(null);
@@ -36,9 +36,14 @@ export function AuthProvider({ children }) {
       setUser,
       async logout() {
         try {
-          await api('/api/auth/logout', { method: 'POST', skipAuthRedirect: true });
+          const refreshToken = getRefreshToken();
+          await api('/api/auth/logout', {
+            method: 'POST',
+            skipAuthRedirect: true,
+            body: refreshToken ? { refreshToken } : undefined,
+          });
         } finally {
-          setAuthToken(null);
+          clearAuthTokens();
           setUser(null);
         }
       },

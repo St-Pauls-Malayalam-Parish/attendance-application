@@ -3,6 +3,8 @@ import { api, formatDate, formatEventType } from '../api.js';
 import { Shell } from '../components/Shell.jsx';
 import { StatusBadge } from '../components/StatusBadge.jsx';
 import { LiturgicalColorBadge } from '../components/LiturgicalColorBadge.jsx';
+import { AttendanceHistoryCard } from '../components/AttendanceHistoryCard.jsx';
+import { FilterPanel } from '../components/FilterPanel.jsx';
 import { Pagination } from '../components/Pagination.jsx';
 import { DateRangeFilters } from '../components/DateRangeFilters.jsx';
 import { useAuth } from '../AuthContext.jsx';
@@ -24,6 +26,7 @@ export function MemberHome() {
   const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
   const pending = user.approvalStatus === 'pending';
   const filtersActive = Boolean(from || to || search || type || liturgicalColor || status);
+  const activeFilterCount = [from, to, search, type, liturgicalColor, status].filter(Boolean).length;
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -169,25 +172,27 @@ export function MemberHome() {
           <div className="card attendance-history-card">
             <h2>Your history</h2>
 
-            <DateRangeFilters
-              showSearch
-              showEventFilters
-              searchDraft={searchDraft}
-              onSearchChange={setSearchDraft}
-              type={type}
-              onTypeChange={handleTypeChange}
-              liturgicalColor={liturgicalColor}
-              onLiturgicalColorChange={handleLiturgicalColorChange}
-              status={status}
-              onStatusChange={handleStatusChange}
-              from={from}
-              to={to}
-              filtersActive={filtersActive}
-              onFromChange={handleFromChange}
-              onToChange={handleToChange}
-              onClear={clearFilters}
-              onApplyRange={applyRange}
-            />
+            <FilterPanel activeCount={activeFilterCount}>
+              <DateRangeFilters
+                showSearch
+                showEventFilters
+                searchDraft={searchDraft}
+                onSearchChange={setSearchDraft}
+                type={type}
+                onTypeChange={handleTypeChange}
+                liturgicalColor={liturgicalColor}
+                onLiturgicalColorChange={handleLiturgicalColorChange}
+                status={status}
+                onStatusChange={handleStatusChange}
+                from={from}
+                to={to}
+                filtersActive={filtersActive}
+                onFromChange={handleFromChange}
+                onToChange={handleToChange}
+                onClear={clearFilters}
+                onApplyRange={applyRange}
+              />
+            </FilterPanel>
 
             <p className="muted filter-summary">
               {data.pagination.total} of {data.meta?.totalUnfiltered ?? data.pagination.total} event
@@ -199,34 +204,42 @@ export function MemberHome() {
               <p className="muted">No events match these filters.</p>
             ) : (
               <>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Event</th>
-                      <th>Type</th>
-                      <th>Liturgical color</th>
-                      <th>Status</th>
-                      <th>Notes</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.history.map((row) => (
-                      <tr key={row.event.id}>
-                        <td>{formatDate(row.event.date)}</td>
-                        <td>{row.event.title}</td>
-                        <td>{formatEventType(row.event.type)}</td>
-                        <td>
-                          <LiturgicalColorBadge color={row.event.liturgicalColor} />
-                        </td>
-                        <td>
-                          <StatusBadge status={row.status} />
-                        </td>
-                        <td className="notes-cell">{row.notes || '—'}</td>
+                <div className="data-list">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Event</th>
+                        <th>Type</th>
+                        <th>Liturgical color</th>
+                        <th>Status</th>
+                        <th>Notes</th>
                       </tr>
+                    </thead>
+                    <tbody>
+                      {data.history.map((row) => (
+                        <tr key={row.event.id}>
+                          <td>{formatDate(row.event.date)}</td>
+                          <td>{row.event.title}</td>
+                          <td>{formatEventType(row.event.type)}</td>
+                          <td>
+                            <LiturgicalColorBadge color={row.event.liturgicalColor} />
+                          </td>
+                          <td>
+                            <StatusBadge status={row.status} />
+                          </td>
+                          <td className="notes-cell">{row.notes || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  <div className="data-cards">
+                    {data.history.map((row) => (
+                      <AttendanceHistoryCard key={row.event.id} row={row} />
                     ))}
-                  </tbody>
-                </table>
+                  </div>
+                </div>
 
                 <Pagination
                   page={data.pagination.page}

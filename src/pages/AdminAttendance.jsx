@@ -3,6 +3,9 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, formatDate, formatEventType } from '../api.js';
 import { EventCard } from '../components/EventCard.jsx';
 import { EventFiltersForm } from '../components/EventFiltersForm.jsx';
+import { FilterPanel } from '../components/FilterPanel.jsx';
+import { AttendanceRosterCard } from '../components/AttendanceRosterCard.jsx';
+import { RosterFiltersForm } from '../components/RosterFiltersForm.jsx';
 import { LiturgicalColorBadge } from '../components/LiturgicalColorBadge.jsx';
 import { Pagination } from '../components/Pagination.jsx';
 import {
@@ -43,12 +46,34 @@ export function AdminAttendance() {
   const [totalUnfiltered, setTotalUnfiltered] = useState(0);
   const [loadingEvents, setLoadingEvents] = useState(!eventId);
   const [roster, setRoster] = useState([]);
+  const [rosterSearch, setRosterSearch] = useState('');
+  const [rosterVoicePart, setRosterVoicePart] = useState('');
   const [event, setEvent] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState('');
 
   const filtersActive = useMemo(() => filtersAreActive(filters), [filters]);
+  const activeFilterCount = useMemo(
+    () => Object.values(filters).filter(Boolean).length,
+    [filters]
+  );
+  const filteredRoster = useMemo(() => {
+    const query = rosterSearch.trim().toLowerCase();
+
+    return roster.filter((member) => {
+      if (rosterVoicePart && member.voicePart !== rosterVoicePart) {
+        return false;
+      }
+      if (!query) {
+        return true;
+      }
+      const haystack = [member.name, member.email].join(' ').toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [roster, rosterSearch, rosterVoicePart]);
+  const rosterFiltersActive = Boolean(rosterSearch.trim() || rosterVoicePart);
+  const activeRosterFilterCount = [rosterSearch.trim(), rosterVoicePart].filter(Boolean).length;
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -99,12 +124,16 @@ export function AdminAttendance() {
   useEffect(() => {
     if (!eventId) {
       setRoster([]);
+      setRosterSearch('');
+      setRosterVoicePart('');
       setEvent(null);
       return undefined;
     }
 
     setSaved('');
     setError('');
+    setRosterSearch('');
+    setRosterVoicePart('');
     api(`/api/attendance/event/${eventId}`)
       .then((data) => {
         const normalized = normalizeAttendanceEvent(data);
@@ -135,6 +164,11 @@ export function AdminAttendance() {
     setRoster((current) =>
       current.map((row) => (row.id === memberId ? { ...row, ...patch } : row))
     );
+  }
+
+  function clearRosterFilters() {
+    setRosterSearch('');
+    setRosterVoicePart('');
   }
 
   async function save() {
@@ -174,15 +208,17 @@ export function AdminAttendance() {
         <div className="card events-card">
           <h2>Upcoming and past</h2>
 
-          <EventFiltersForm
-            searchDraft={searchDraft}
-            filters={filters}
-            years={years}
-            filtersActive={filtersActive}
-            onSearchChange={(value) => updateFilter('search', value)}
-            onFilterChange={updateFilter}
-            onClear={clearFilters}
-          />
+          <FilterPanel activeCount={activeFilterCount}>
+            <EventFiltersForm
+              searchDraft={searchDraft}
+              filters={filters}
+              years={years}
+              filtersActive={filtersActive}
+              onSearchChange={(value) => updateFilter('search', value)}
+              onFilterChange={updateFilter}
+              onClear={clearFilters}
+            />
+          </FilterPanel>
 
           <p className="muted filter-summary">
             {eventPagination.total} of {totalUnfiltered} event{totalUnfiltered === 1 ? '' : 's'} match
@@ -247,8 +283,9 @@ export function AdminAttendance() {
       </p>
 
       {event ? (
+        <>
         <div className="card attendance-card">
-          <div className="toolbar">
+          <div className="toolbar attendance-event-head">
             <div>
               <h2>{event.title}</h2>
               <p className="muted">
@@ -261,56 +298,94 @@ export function AdminAttendance() {
                 ) : null}
               </p>
             </div>
-            <button type="button" onClick={save} disabled={busy}>
+            <button type="button" className="attendance-save-desktop" onClick={save} disabled={busy}>
               {busy ? 'Saving…' : 'Save attendance'}
             </button>
           </div>
-          {saved ? <p className="ok">{saved}</p> : null}
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Voice</th>
-                <th>Status</th>
-                <th>Notes</th>
-              </tr>
-            </thead>
-            <tbody>
-              {roster.map((member) => (
-                <tr key={member.id}>
-                  <td>{member.name}</td>
-                  <td className="capitalize">{member.voicePart}</td>
-                  <td>
-                    <div className="status-pills">
-                      {STATUSES.map((status) => (
-                        <label key={status.value} className={member.status === status.value ? 'selected' : ''}>
-                          <input
-                            type="radio"
-                            name={`status-${member.id}`}
-                            checked={member.status === status.value}
-                            onChange={() => updateRow(member.id, { status: status.value })}
-                          />
-                          {status.label}
-                        </label>
-                      ))}
-                    </div>
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      className="notes-input"
-                      value={member.notes || ''}
-                      onChange={(e) => updateRow(member.id, { notes: e.target.value })}
-                      placeholder="Optional note"
-                      maxLength={500}
-                      disabled={!member.status}
-                    />
-                  </td>
+          {saved ? <p className="ok attendance-save-message">{saved}</p> : null}
+
+          <FilterPanel activeCount={activeRosterFilterCount}>
+            <RosterFiltersForm
+              searchDraft={rosterSearch}
+              voicePart={rosterVoicePart}
+              filtersActive={rosterFiltersActive}
+              onSearchChange={setRosterSearch}
+              onVoicePartChange={setRosterVoicePart}
+              onClear={clearRosterFilters}
+            />
+          </FilterPanel>
+
+          <p className="muted filter-summary">
+            {rosterFiltersActive
+              ? `${filteredRoster.length} of ${roster.length} member${roster.length === 1 ? '' : 's'} match these filters`
+              : `${roster.length} member${roster.length === 1 ? '' : 's'}`}
+          </p>
+
+          {filteredRoster.length === 0 ? (
+            <p className="muted">No members match these filters.</p>
+          ) : (
+          <div className="data-list">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Voice</th>
+                  <th>Status</th>
+                  <th>Notes</th>
                 </tr>
+              </thead>
+              <tbody>
+                {filteredRoster.map((member) => (
+                  <tr key={member.id}>
+                    <td>{member.name}</td>
+                    <td className="capitalize">{member.voicePart}</td>
+                    <td>
+                      <div className="status-pills">
+                        {STATUSES.map((status) => (
+                          <label key={status.value} className={member.status === status.value ? 'selected' : ''}>
+                            <input
+                              type="radio"
+                              name={`status-${member.id}`}
+                              checked={member.status === status.value}
+                              onChange={() => updateRow(member.id, { status: status.value })}
+                            />
+                            {status.label}
+                          </label>
+                        ))}
+                      </div>
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        className="notes-input"
+                        value={member.notes || ''}
+                        onChange={(e) => updateRow(member.id, { notes: e.target.value })}
+                        placeholder="Optional note"
+                        maxLength={500}
+                        disabled={!member.status}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="data-cards">
+              {filteredRoster.map((member) => (
+                <AttendanceRosterCard key={member.id} member={member} onUpdate={updateRow} />
               ))}
-            </tbody>
-          </table>
+            </div>
+          </div>
+          )}
         </div>
+
+        <div className="attendance-save-bar" aria-live="polite">
+          {saved ? <p className="ok attendance-save-feedback">{saved}</p> : null}
+          <button type="button" onClick={save} disabled={busy}>
+            {busy ? 'Saving…' : 'Save attendance'}
+          </button>
+        </div>
+        </>
       ) : (
         <p className="muted">Loading attendance…</p>
       )}

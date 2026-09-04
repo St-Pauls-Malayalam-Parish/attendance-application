@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api, EVENT_TYPES, LITURGICAL_COLORS, toDateTimeLocal } from '../api.js';
+import { api, toDateTimeLocal } from '../api.js';
 import { EventCard } from '../components/EventCard.jsx';
 import { EventCalendar } from '../components/EventCalendar.jsx';
 import { EventDetailPanel } from '../components/EventDetailPanel.jsx';
 import { ConfirmDialog } from '../components/ConfirmDialog.jsx';
+import { EventFormModal } from '../components/EventFormModal.jsx';
 import { EventFiltersForm } from '../components/EventFiltersForm.jsx';
+import { FilterPanel } from '../components/FilterPanel.jsx';
 import { Pagination } from '../components/Pagination.jsx';
 import { ViewToggle } from '../components/ViewToggle.jsx';
 import {
@@ -59,8 +61,13 @@ export function AdminEvents() {
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [selectedCalendarEventId, setSelectedCalendarEventId] = useState(null);
   const [calendarDetailOpen, setCalendarDetailOpen] = useState(false);
+  const [eventModalOpen, setEventModalOpen] = useState(false);
 
   const filtersActive = useMemo(() => filtersAreActive(filters), [filters]);
+  const activeFilterCount = useMemo(
+    () => Object.values(filters).filter(Boolean).length,
+    [filters]
+  );
   const selectedCalendarEvent = useMemo(
     () => calendarEvents.find((event) => event.id === selectedCalendarEventId) ?? null,
     [calendarEvents, selectedCalendarEventId]
@@ -217,6 +224,21 @@ export function AdminEvents() {
     setCalendarDetailOpen(false);
   }
 
+  function openAddEvent() {
+    setError('');
+    setSaved('');
+    setEditingId(null);
+    setForm(emptyForm());
+    setEventModalOpen(true);
+  }
+
+  function closeEventModal() {
+    if (busy) return;
+    setEventModalOpen(false);
+    setEditingId(null);
+    setForm(emptyForm());
+  }
+
   function startEdit(event) {
     setError('');
     setSaved('');
@@ -228,16 +250,17 @@ export function AdminEvents() {
       liturgicalColor: event.liturgicalColor || '',
       notes: event.notes || '',
     });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setEventModalOpen(true);
+    setCalendarDetailOpen(false);
   }
 
-  function cancelEdit() {
-    setEditingId(null);
-    setForm(emptyForm());
+  function requestDeleteFromModal() {
+    if (!editingId) return;
+    setDeleteId(editingId);
+    setEventModalOpen(false);
   }
 
-  async function onSubmit(event) {
-    event.preventDefault();
+  async function onSubmit() {
     setBusy(true);
     setError('');
     setSaved('');
@@ -245,12 +268,11 @@ export function AdminEvents() {
       if (editingId) {
         await api(`/api/events/${editingId}`, { method: 'PATCH', body: form });
         setSaved('Event updated');
-        cancelEdit();
       } else {
         await api('/api/events', { method: 'POST', body: form });
-        setForm(emptyForm());
         setSaved('Event added');
       }
+      closeEventModal();
       await refreshAfterMutation();
     } catch (err) {
       setError(err.message);
@@ -264,7 +286,11 @@ export function AdminEvents() {
     setBusy(true);
     setError('');
     try {
-      if (editingId === deleteId) cancelEdit();
+      if (editingId === deleteId) {
+        setEditingId(null);
+        setForm(emptyForm());
+        setEventModalOpen(false);
+      }
       await api(`/api/events/${deleteId}`, { method: 'DELETE' });
       setDeleteId(null);
       setSaved('Event deleted');
@@ -278,75 +304,19 @@ export function AdminEvents() {
 
   return (
     <>
-      <section className="page-head">
+      <section className="page-head page-head-with-action">
         <div>
           <p className="eyebrow">Events</p>
           <h1>Practices and services</h1>
           <p className="lede">Create events, then mark who was present from Take attendance.</p>
         </div>
+        <button type="button" className="page-head-action" onClick={openAddEvent}>
+          Add event
+        </button>
       </section>
 
       {error ? <p className="alert">{error}</p> : null}
       {saved ? <p className="ok">{saved}</p> : null}
-
-      <form className="card form grid-form" onSubmit={onSubmit}>
-        <h2 className="span-2">{editingId ? 'Edit event' : 'Add event'}</h2>
-        <label>
-          Title
-          <input
-            value={form.title}
-            onChange={(e) => setForm({ ...form, title: e.target.value })}
-            placeholder="Friday practice"
-            required
-          />
-        </label>
-        <label>
-          Date and time
-          <input
-            type="datetime-local"
-            value={form.date}
-            onChange={(e) => setForm({ ...form, date: e.target.value })}
-            required
-          />
-        </label>
-        <label>
-          Type
-          <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
-            {EVENT_TYPES.map((type) => (
-              <option key={type.value} value={type.value}>
-                {type.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Liturgical colour
-          <select
-            value={form.liturgicalColor}
-            onChange={(e) => setForm({ ...form, liturgicalColor: e.target.value })}
-          >
-            {LITURGICAL_COLORS.map((color) => (
-              <option key={color.value || 'none'} value={color.value}>
-                {color.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="span-2">
-          Notes
-          <input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
-        </label>
-        <div className="row-actions span-2">
-          <button type="submit" disabled={busy}>
-            {busy ? 'Saving…' : editingId ? 'Save changes' : 'Add event'}
-          </button>
-          {editingId ? (
-            <button type="button" className="ghost" onClick={cancelEdit} disabled={busy}>
-              Cancel
-            </button>
-          ) : null}
-        </div>
-      </form>
 
       <div className="card events-card">
         <div className="events-card-head">
@@ -361,15 +331,17 @@ export function AdminEvents() {
           />
         </div>
 
-        <EventFiltersForm
-          searchDraft={searchDraft}
-          filters={filters}
-          years={years}
-          filtersActive={filtersActive}
-          onSearchChange={(value) => updateFilter('search', value)}
-          onFilterChange={updateFilter}
-          onClear={clearFilters}
-        />
+        <FilterPanel activeCount={activeFilterCount}>
+          <EventFiltersForm
+            searchDraft={searchDraft}
+            filters={filters}
+            years={years}
+            filtersActive={filtersActive}
+            onSearchChange={(value) => updateFilter('search', value)}
+            onFilterChange={updateFilter}
+            onClear={clearFilters}
+          />
+        </FilterPanel>
 
         <p className="muted filter-summary">
           {viewMode === 'calendar'
@@ -402,7 +374,7 @@ export function AdminEvents() {
               <aside className="calendar-layout-panel">
                 <EventDetailPanel
                   event={selectedCalendarEvent}
-                  editing={editingId === selectedCalendarEvent?.id}
+                  editing={eventModalOpen && editingId === selectedCalendarEvent?.id}
                   actions={
                     selectedCalendarEvent
                       ? renderEventActions(selectedCalendarEvent)
@@ -423,7 +395,7 @@ export function AdminEvents() {
                 <div className="calendar-detail-sheet">
                   <EventDetailPanel
                     event={selectedCalendarEvent}
-                    editing={editingId === selectedCalendarEvent.id}
+                    editing={eventModalOpen && editingId === selectedCalendarEvent.id}
                     actions={renderEventActions(selectedCalendarEvent, {
                       onAction: closeCalendarDetail,
                     })}
@@ -442,7 +414,7 @@ export function AdminEvents() {
                 <EventCard
                   key={event.id}
                   event={event}
-                  selected={editingId === event.id}
+                  selected={eventModalOpen && editingId === event.id}
                   actions={renderEventActions(event)}
                 />
               ))}
@@ -465,6 +437,17 @@ export function AdminEvents() {
           </>
         )}
       </div>
+
+      <EventFormModal
+        open={eventModalOpen}
+        editingId={editingId}
+        form={form}
+        onFormChange={setForm}
+        busy={busy}
+        onSubmit={onSubmit}
+        onClose={closeEventModal}
+        onDelete={requestDeleteFromModal}
+      />
 
       <ConfirmDialog
         open={deleteId !== null}

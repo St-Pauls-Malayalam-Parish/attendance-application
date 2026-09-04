@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api, VOICE_PARTS, toDateInput } from '../api.js';
 import { ConfirmDialog } from '../components/ConfirmDialog.jsx';
+import { FilterPanel } from '../components/FilterPanel.jsx';
+import { MemberCard } from '../components/MemberCard.jsx';
 import { Pagination } from '../components/Pagination.jsx';
 import {
   emptyMemberFilters,
@@ -83,6 +85,10 @@ export function AdminMembers() {
   const [confirmBusy, setConfirmBusy] = useState(false);
 
   const filtersActive = useMemo(() => memberFiltersAreActive(filters), [filters]);
+  const activeFilterCount = useMemo(
+    () => Object.values(filters).filter(Boolean).length,
+    [filters]
+  );
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -314,45 +320,76 @@ export function AdminMembers() {
         {pending.length === 0 ? (
           <p className="muted">No pending registrations.</p>
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Username</th>
-                <th>Email</th>
-                <th>Voice</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {pending.map((member) => (
-                <tr key={member.id}>
-                  <td>{member.name}</td>
-                  <td>{member.username}</td>
-                  <td>{member.email}</td>
-                  <td className="capitalize">{member.voicePart}</td>
-                  <td className="row-actions">
-                    <button type="button" onClick={() => setApproval(member.id, 'approved')}>
-                      Approve
-                    </button>
-                    <button
-                      type="button"
-                      className="ghost danger"
-                      onClick={() => setApproval(member.id, 'rejected')}
-                    >
-                      Decline
-                    </button>
-                    <MemberActions
-                      member={member}
-                      onEdit={startEdit}
-                      onSetActive={setActive}
-                      onDelete={removeMember}
-                    />
-                  </td>
+          <div className="data-list">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Username</th>
+                  <th>Email</th>
+                  <th>Voice</th>
+                  <th></th>
                 </tr>
+              </thead>
+              <tbody>
+                {pending.map((member) => (
+                  <tr key={member.id}>
+                    <td>{member.name}</td>
+                    <td>{member.username}</td>
+                    <td>{member.email}</td>
+                    <td className="capitalize">{member.voicePart}</td>
+                    <td className="row-actions">
+                      <button type="button" onClick={() => setApproval(member.id, 'approved')}>
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        className="ghost danger"
+                        onClick={() => setApproval(member.id, 'rejected')}
+                      >
+                        Decline
+                      </button>
+                      <MemberActions
+                        member={member}
+                        onEdit={startEdit}
+                        onSetActive={setActive}
+                        onDelete={removeMember}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="data-cards">
+              {pending.map((member) => (
+                <MemberCard
+                  key={member.id}
+                  member={member}
+                  actions={
+                    <div className="row-actions">
+                      <button type="button" onClick={() => setApproval(member.id, 'approved')}>
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        className="ghost danger"
+                        onClick={() => setApproval(member.id, 'rejected')}
+                      >
+                        Decline
+                      </button>
+                      <MemberActions
+                        member={member}
+                        onEdit={startEdit}
+                        onSetActive={setActive}
+                        onDelete={removeMember}
+                      />
+                    </div>
+                  }
+                />
               ))}
-            </tbody>
-          </table>
+            </div>
+          </div>
         )}
       </div>
 
@@ -416,7 +453,8 @@ export function AdminMembers() {
       <div className="card members-card">
         <h2>Roster</h2>
 
-        <form className="member-filters" onSubmit={(e) => e.preventDefault()}>
+        <FilterPanel activeCount={activeFilterCount}>
+          <form className="member-filters" onSubmit={(e) => e.preventDefault()}>
           <label className="filter-field-wide">
             Search
             <input
@@ -506,6 +544,7 @@ export function AdminMembers() {
             </div>
           </div>
         </form>
+        </FilterPanel>
 
         <p className="muted filter-summary">
           {pagination.total} of {totalUnfiltered} member{pagination.total === 1 ? '' : 's'} match
@@ -518,43 +557,64 @@ export function AdminMembers() {
           <p className="muted">No members match these filters.</p>
         ) : (
           <>
-            <table>
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Username</th>
-                  <th>Email</th>
-                  <th>Voice</th>
-                  <th>Percentage</th>
-                  <th>Present</th>
-                  <th>Late</th>
-                  <th>Absent</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
+            <div className="data-list">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Voice</th>
+                    <th>Percentage</th>
+                    <th>Present</th>
+                    <th>Late</th>
+                    <th>Absent</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {members.map((member) => (
+                    <tr key={member.id} className={editingId === member.id ? 'editing' : ''}>
+                      <td>{member.name}</td>
+                      <td>{member.username}</td>
+                      <td>{member.email}</td>
+                      <td className="capitalize">{member.voicePart}</td>
+                      <td>{member.summary.rate}%</td>
+                      <td>{member.summary.present}</td>
+                      <td>{member.summary.late}</td>
+                      <td>{member.summary.absent}</td>
+                      <td className="row-actions">
+                        <MemberActions
+                          member={member}
+                          onEdit={startEdit}
+                          onSetActive={setActive}
+                          onDelete={removeMember}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <div className="data-cards">
                 {members.map((member) => (
-                  <tr key={member.id} className={editingId === member.id ? 'editing' : ''}>
-                    <td>{member.name}</td>
-                    <td>{member.username}</td>
-                    <td>{member.email}</td>
-                    <td className="capitalize">{member.voicePart}</td>
-                    <td>{member.summary.rate}%</td>
-                    <td>{member.summary.present}</td>
-                    <td>{member.summary.late}</td>
-                    <td>{member.summary.absent}</td>
-                    <td className="row-actions">
+                  <MemberCard
+                    key={member.id}
+                    member={member}
+                    summary={member.summary}
+                    editing={editingId === member.id}
+                    actions={
                       <MemberActions
                         member={member}
                         onEdit={startEdit}
                         onSetActive={setActive}
                         onDelete={removeMember}
                       />
-                    </td>
-                  </tr>
+                    }
+                  />
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </div>
 
             <Pagination
               page={pagination.page}
@@ -581,71 +641,115 @@ export function AdminMembers() {
             Deactivated members cannot sign in. Their attendance history is kept until you delete them
             permanently.
           </p>
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Username</th>
-                <th>Email</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
+          <div className="data-list">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Username</th>
+                  <th>Email</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {inactive.map((member) => (
+                  <tr key={member.id}>
+                    <td>{member.name}</td>
+                    <td>{member.username}</td>
+                    <td>{member.email}</td>
+                    <td className="capitalize">{member.approvalStatus}</td>
+                    <td className="row-actions">
+                      <MemberActions
+                        member={member}
+                        onEdit={startEdit}
+                        onSetActive={setActive}
+                        onDelete={removeMember}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="data-cards">
               {inactive.map((member) => (
-                <tr key={member.id}>
-                  <td>{member.name}</td>
-                  <td>{member.username}</td>
-                  <td>{member.email}</td>
-                  <td className="capitalize">{member.approvalStatus}</td>
-                  <td className="row-actions">
+                <MemberCard
+                  key={member.id}
+                  member={member}
+                  statusLabel={member.approvalStatus}
+                  actions={
                     <MemberActions
                       member={member}
                       onEdit={startEdit}
                       onSetActive={setActive}
                       onDelete={removeMember}
                     />
-                  </td>
-                </tr>
+                  }
+                />
               ))}
-            </tbody>
-          </table>
+            </div>
+          </div>
         </div>
       ) : null}
 
       {declined.length > 0 ? (
         <div className="card">
           <h2>Declined</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Username</th>
-                <th>Email</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {declined.map((member) => (
-                <tr key={member.id}>
-                  <td>{member.name}</td>
-                  <td>{member.username}</td>
-                  <td>{member.email}</td>
-                  <td className="row-actions">
-                    <button type="button" className="ghost" onClick={() => setApproval(member.id, 'approved')}>
-                      Approve anyway
-                    </button>
-                    <MemberActions
-                      member={member}
-                      onEdit={startEdit}
-                      onSetActive={setActive}
-                      onDelete={removeMember}
-                    />
-                  </td>
+          <div className="data-list">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Username</th>
+                  <th>Email</th>
+                  <th></th>
                 </tr>
+              </thead>
+              <tbody>
+                {declined.map((member) => (
+                  <tr key={member.id}>
+                    <td>{member.name}</td>
+                    <td>{member.username}</td>
+                    <td>{member.email}</td>
+                    <td className="row-actions">
+                      <button type="button" className="ghost" onClick={() => setApproval(member.id, 'approved')}>
+                        Approve anyway
+                      </button>
+                      <MemberActions
+                        member={member}
+                        onEdit={startEdit}
+                        onSetActive={setActive}
+                        onDelete={removeMember}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="data-cards">
+              {declined.map((member) => (
+                <MemberCard
+                  key={member.id}
+                  member={member}
+                  actions={
+                    <div className="row-actions">
+                      <button type="button" className="ghost" onClick={() => setApproval(member.id, 'approved')}>
+                        Approve anyway
+                      </button>
+                      <MemberActions
+                        member={member}
+                        onEdit={startEdit}
+                        onSetActive={setActive}
+                        onDelete={removeMember}
+                      />
+                    </div>
+                  }
+                />
               ))}
-            </tbody>
-          </table>
+            </div>
+          </div>
         </div>
       ) : null}
 

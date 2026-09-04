@@ -17,6 +17,9 @@ export function Register() {
   const [busy, setBusy] = useState(false);
 
   if (user) {
+    if (user.mustChangePassword) {
+      return <Navigate to="/change-password" replace />;
+    }
     return <Navigate to={user.role === 'admin' ? '/admin/events' : '/attendance'} replace />;
   }
 

@@ -14,6 +14,9 @@ export function Login() {
   const sessionExpired = searchParams.get('session') === 'expired';
 
   if (user) {
+    if (user.mustChangePassword) {
+      return <Navigate to="/change-password" replace />;
+    }
     return <Navigate to={user.role === 'admin' ? '/admin/events' : '/attendance'} replace />;
   }
 

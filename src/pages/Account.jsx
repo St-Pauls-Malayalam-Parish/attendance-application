@@ -8,7 +8,7 @@ const memberLinks = [
 ];
 
 export function Account({ admin = false }) {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
 
   const content = (
     <>
@@ -22,7 +22,7 @@ export function Account({ admin = false }) {
           </p>
         </div>
       </section>
-      <ChangePasswordForm />
+      <ChangePasswordForm onSuccess={setUser} />
     </>
   );
 

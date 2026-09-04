@@ -8,12 +8,14 @@ import { AdminEvents } from './pages/AdminEvents.jsx';
 import { AdminAttendance } from './pages/AdminAttendance.jsx';
 import { AdminMembers } from './pages/AdminMembers.jsx';
 import { Account } from './pages/Account.jsx';
+import { ChangePassword } from './pages/ChangePassword.jsx';
 
 export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/change-password" element={<ChangePassword />} />
       <Route element={<ProtectedRoute />}>
         <Route index element={<Navigate to="attendance" replace />} />
         <Route path="attendance" element={<MemberHome />} />

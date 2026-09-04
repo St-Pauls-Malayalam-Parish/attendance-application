@@ -3,6 +3,7 @@ import { api, VOICE_PARTS, toDateInput } from '../api.js';
 import { ConfirmDialog } from '../components/ConfirmDialog.jsx';
 import { FilterPanel } from '../components/FilterPanel.jsx';
 import { MemberCard } from '../components/MemberCard.jsx';
+import { MemberFormModal } from '../components/MemberFormModal.jsx';
 import { Pagination } from '../components/Pagination.jsx';
 import {
   emptyMemberFilters,
@@ -83,6 +84,7 @@ export function AdminMembers() {
   const [busy, setBusy] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
+  const [memberModalOpen, setMemberModalOpen] = useState(false);
 
   const filtersActive = useMemo(() => memberFiltersAreActive(filters), [filters]);
   const activeFilterCount = useMemo(
@@ -162,6 +164,21 @@ export function AdminMembers() {
     setPage(1);
   }
 
+  function openAddMember() {
+    setError('');
+    setSaved('');
+    setEditingId(null);
+    setForm(emptyForm);
+    setMemberModalOpen(true);
+  }
+
+  function closeMemberModal() {
+    if (busy) return;
+    setMemberModalOpen(false);
+    setEditingId(null);
+    setForm(emptyForm);
+  }
+
   function startEdit(member) {
     setError('');
     setSaved('');
@@ -173,16 +190,14 @@ export function AdminMembers() {
       password: '',
       voicePart: member.voicePart || 'other',
     });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setMemberModalOpen(true);
   }
 
   function cancelEdit() {
-    setEditingId(null);
-    setForm(emptyForm);
+    closeMemberModal();
   }
 
-  async function onSubmit(event) {
-    event.preventDefault();
+  async function onSubmit() {
     setBusy(true);
     setError('');
     setSaved('');
@@ -199,12 +214,11 @@ export function AdminMembers() {
         }
         await api(`/api/members/${editingId}`, { method: 'PATCH', body });
         setSaved('Member details saved');
-        cancelEdit();
       } else {
         await api('/api/members', { method: 'POST', body: form });
-        setForm(emptyForm);
         setSaved('Member added');
       }
+      closeMemberModal();
       await refreshAll();
     } catch (err) {
       setError(err.message);
@@ -301,7 +315,7 @@ export function AdminMembers() {
 
   return (
     <>
-      <section className="page-head">
+      <section className="page-head page-head-with-action">
         <div>
           <p className="eyebrow">Members</p>
           <h1>Choir members</h1>
@@ -310,6 +324,9 @@ export function AdminMembers() {
             for a date range.
           </p>
         </div>
+        <button type="button" className="page-head-action" onClick={openAddMember}>
+          Add member
+        </button>
       </section>
 
       {error ? <p className="alert">{error}</p> : null}
@@ -392,63 +409,6 @@ export function AdminMembers() {
           </div>
         )}
       </div>
-
-      <form className="card form grid-form" onSubmit={onSubmit}>
-        <h2 className="span-2">{editingId ? 'Edit member' : 'Add approved member'}</h2>
-        <label>
-          Name
-          <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-        </label>
-        <label>
-          Username
-          <input
-            value={form.username}
-            onChange={(e) => setForm({ ...form, username: e.target.value.toLowerCase() })}
-            required
-          />
-        </label>
-        <label>
-          Email
-          <input
-            type="email"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-            required
-          />
-        </label>
-        <label>
-          {editingId ? 'Reset password (optional)' : 'Temporary password'}
-          <input
-            type="password"
-            minLength={editingId ? undefined : 8}
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-            required={!editingId}
-            placeholder={editingId ? 'Leave blank to keep current password' : ''}
-            autoComplete={editingId ? 'new-password' : 'off'}
-          />
-        </label>
-        <label>
-          Voice part
-          <select value={form.voicePart} onChange={(e) => setForm({ ...form, voicePart: e.target.value })}>
-            {VOICE_PARTS.map((part) => (
-              <option key={part.value} value={part.value}>
-                {part.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="row-actions span-2">
-          {editingId ? (
-            <button type="button" className="ghost" onClick={cancelEdit}>
-              Cancel
-            </button>
-          ) : null}
-          <button type="submit" disabled={busy}>
-            {busy ? 'Saving…' : editingId ? 'Save changes' : 'Add approved member'}
-          </button>
-        </div>
-      </form>
 
       <div className="card members-card">
         <h2>Roster</h2>
@@ -574,7 +534,7 @@ export function AdminMembers() {
                 </thead>
                 <tbody>
                   {members.map((member) => (
-                    <tr key={member.id} className={editingId === member.id ? 'editing' : ''}>
+                    <tr key={member.id} className={memberModalOpen && editingId === member.id ? 'editing' : ''}>
                       <td>{member.name}</td>
                       <td>{member.username}</td>
                       <td>{member.email}</td>
@@ -602,7 +562,7 @@ export function AdminMembers() {
                     key={member.id}
                     member={member}
                     summary={member.summary}
-                    editing={editingId === member.id}
+                    editing={memberModalOpen && editingId === member.id}
                     actions={
                       <MemberActions
                         member={member}
@@ -752,6 +712,16 @@ export function AdminMembers() {
           </div>
         </div>
       ) : null}
+
+      <MemberFormModal
+        open={memberModalOpen}
+        editingId={editingId}
+        form={form}
+        onFormChange={setForm}
+        busy={busy}
+        onSubmit={onSubmit}
+        onClose={closeMemberModal}
+      />
 
       <ConfirmDialog
         open={confirmDialog !== null}

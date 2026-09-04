@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 
-export function ChangePasswordForm() {
+export function ChangePasswordForm({ required = false, onSuccess }) {
+  const navigate = useNavigate();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -21,7 +23,7 @@ export function ChangePasswordForm() {
 
     setBusy(true);
     try {
-      await api('/api/auth/change-password', {
+      const data = await api('/api/auth/change-password', {
         method: 'POST',
         body: { currentPassword, newPassword },
         skipAuthRedirect: true,
@@ -29,7 +31,15 @@ export function ChangePasswordForm() {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+      if (required && data.user) {
+        onSuccess?.(data.user);
+        navigate(data.user.role === 'admin' ? '/admin/events' : '/attendance', { replace: true });
+        return;
+      }
       setSaved('Password updated');
+      if (data.user) {
+        onSuccess?.(data.user);
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -39,8 +49,12 @@ export function ChangePasswordForm() {
 
   return (
     <form className="card form" onSubmit={onSubmit}>
-      <h2>Change password</h2>
-      <p className="muted">Use at least 8 characters. You will stay signed in after saving.</p>
+      <h2>{required ? 'Set your password' : 'Change password'}</h2>
+      <p className="muted">
+        {required
+          ? 'This is your first sign-in. Choose a personal password (at least 8 characters) before continuing.'
+          : 'Use at least 8 characters. You will stay signed in after saving.'}
+      </p>
       {error ? <p className="alert">{error}</p> : null}
       {saved ? <p className="ok">{saved}</p> : null}
       <label>
@@ -76,7 +90,7 @@ export function ChangePasswordForm() {
         />
       </label>
       <button type="submit" disabled={busy}>
-        {busy ? 'Saving…' : 'Update password'}
+        {busy ? 'Saving…' : required ? 'Continue' : 'Update password'}
       </button>
     </form>
   );

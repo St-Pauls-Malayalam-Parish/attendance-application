@@ -6,7 +6,7 @@ export function AdminHome() {
     <Shell
       links={[
         { to: '/admin/events', label: 'Events', end: true },
-        { to: '/admin/attendance', label: 'Take attendance' },
+        { to: '/admin/attendance', label: 'Take attendance', mobileLabel: 'Attendance' },
         { to: '/admin/members', label: 'Members' },
         { to: '/admin/account', label: 'Account' },
       ]}

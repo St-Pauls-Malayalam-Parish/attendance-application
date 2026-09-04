@@ -25,8 +25,8 @@ export function Pagination({
 
   return (
     <nav className="pagination" aria-label="Pagination">
-      <p className="pagination-range muted">{rangeText}</p>
-      <div className="pagination-actions">
+      <div className="pagination-meta">
+        <p className="pagination-range muted">{rangeText}</p>
         {showPageSize ? (
           <label className="pagination-size">
             <span>Per page</span>
@@ -44,27 +44,30 @@ export function Pagination({
             </select>
           </label>
         ) : null}
-        <div className="pagination-nav">
-          <button
-            type="button"
-            className="ghost pagination-btn"
-            disabled={disabled || !hasPrevious}
-            onClick={() => onPageChange(page - 1)}
-          >
-            Previous
-          </button>
-          <span className="pagination-status">
-            Page {page} of {totalPages}
-          </span>
-          <button
-            type="button"
-            className="ghost pagination-btn"
-            disabled={disabled || !hasNext}
-            onClick={() => onPageChange(page + 1)}
-          >
-            Next
-          </button>
-        </div>
+      </div>
+
+      <div className="pagination-nav">
+        <button
+          type="button"
+          className="ghost pagination-btn"
+          disabled={disabled || !hasPrevious}
+          onClick={() => onPageChange(page - 1)}
+        >
+          <span className="pagination-btn-short" aria-hidden="true">Prev</span>
+          <span className="pagination-btn-full">Previous</span>
+        </button>
+        <span className="pagination-status">
+          Page {page} of {totalPages}
+        </span>
+        <button
+          type="button"
+          className="ghost pagination-btn"
+          disabled={disabled || !hasNext}
+          onClick={() => onPageChange(page + 1)}
+        >
+          <span className="pagination-btn-short" aria-hidden="true">Next</span>
+          <span className="pagination-btn-full">Next</span>
+        </button>
       </div>
     </nav>
   );

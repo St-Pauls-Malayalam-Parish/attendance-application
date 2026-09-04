@@ -480,6 +480,10 @@ select:focus-visible {
   display: none;
 }
 
+.bottom-nav-label-short {
+  display: none;
+}
+
 .capitalize {
   text-transform: capitalize;
 }
@@ -1400,29 +1404,27 @@ td {
 }
 
 .pagination {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 1.25rem;
+  padding: 1rem 1.05rem;
+  border: 1px solid var(--line);
+  border-radius: 0.95rem;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.pagination-meta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem 1.25rem;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--line);
+  gap: 0.65rem 1rem;
 }
 
 .pagination-range {
   margin: 0;
   font-size: 0.92rem;
-  flex: 1 1 10rem;
-}
-
-.pagination-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.75rem 1rem;
-  flex: 2 1 16rem;
+  flex: 1 1 12rem;
 }
 
 .pagination-size {
@@ -1448,35 +1450,86 @@ td {
 }
 
 .pagination-nav {
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: 0.35rem;
-  padding: 0.2rem;
+  padding: 0.25rem;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 0.8rem;
   background: #fff;
 }
 
 .pagination-btn {
-  padding: 0.45rem 0.95rem;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.85rem;
   font-size: 0.9rem;
+}
+
+.pagination-btn-short {
+  display: none;
 }
 
 .pagination-status {
   font-size: 0.88rem;
   color: var(--muted);
-  padding: 0 0.5rem;
+  padding: 0 0.35rem;
   white-space: nowrap;
+  text-align: center;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .pagination {
-    flex-direction: column;
-    align-items: stretch;
+    gap: 0.75rem;
+    padding: 0.85rem;
   }
 
-  .pagination-actions {
-    justify-content: space-between;
+  .pagination-meta {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+
+  .pagination-range {
+    flex: none;
+    font-size: 0.86rem;
+  }
+
+  .pagination-size {
+    justify-content: center;
+  }
+
+  .pagination-size select {
+    min-height: 2.5rem;
+  }
+
+  .pagination-nav {
+    border-radius: 0.75rem;
+  }
+
+  .pagination-btn {
+    min-height: 2.65rem;
+    padding: 0.5rem 0.55rem;
+    font-size: 0.84rem;
+  }
+
+  .pagination-btn-full {
+    display: none;
+  }
+
+  .pagination-btn-short {
+    display: inline;
+  }
+
+  .pagination-status {
+    font-size: 0.8rem;
+    padding: 0 0.2rem;
+  }
+}
+
+@media (min-width: 769px) {
+  .bottom-nav-label-short {
+    display: none;
   }
 }
 
@@ -1929,7 +1982,7 @@ button.confirm-danger:hover:not(:disabled) {
 @media (max-width: 768px) {
   .content {
     width: min(1080px, calc(100% - 1rem));
-    padding: 1rem 0 calc(5.5rem + env(safe-area-inset-bottom, 0px));
+    padding: 1rem 0 calc(6rem + env(safe-area-inset-bottom, 0px));
   }
 
   .topbar {
@@ -1985,27 +2038,40 @@ button.confirm-danger:hover:not(:disabled) {
     right: 0;
     bottom: 0;
     z-index: 110;
-    gap: 0.25rem;
-    padding: 0.35rem 0.5rem calc(0.35rem + env(safe-area-inset-bottom, 0px));
-    background: rgba(255, 248, 236, 0.96);
+    gap: 0.2rem;
+    padding: 0.4rem 0.45rem calc(0.45rem + env(safe-area-inset-bottom, 0px));
+    background: rgba(255, 248, 236, 0.98);
     border-top: 1px solid var(--line);
+    box-shadow: 0 -6px 24px rgba(44, 36, 28, 0.07);
     backdrop-filter: blur(10px);
   }
 
   .bottom-nav-link {
     flex: 1 1 0;
-    min-height: 2.75rem;
+    min-height: 3rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0.35rem 0.4rem;
-    border-radius: 0.75rem;
+    padding: 0.35rem 0.3rem;
+    border-radius: 0.7rem;
     text-decoration: none;
     text-align: center;
-    font-size: 0.72rem;
+    font-size: 0.74rem;
     font-weight: 600;
     line-height: 1.2;
     color: var(--muted);
+  }
+
+  .bottom-nav-label-full {
+    display: none;
+  }
+
+  .bottom-nav-label-short {
+    display: inline;
+  }
+
+  .bottom-nav-link:not(:has(.bottom-nav-label-short)) .bottom-nav-label-full {
+    display: inline;
   }
 
   .bottom-nav-link.active {

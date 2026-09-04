@@ -41,13 +41,16 @@ export function Shell({ children, links }) {
 
       <main className="content">{children}</main>
 
-      <nav className="bottom-nav" aria-label="Main navigation">
-        {links.map((link) => (
-          <NavLink key={link.to} to={link.to} end={link.end} className="bottom-nav-link">
-            {link.label}
-          </NavLink>
-        ))}
-      </nav>
+        <nav className="bottom-nav" aria-label="Main navigation">
+          {links.map((link) => (
+            <NavLink key={link.to} to={link.to} end={link.end} className="bottom-nav-link">
+              <span className="bottom-nav-label-full">{link.label}</span>
+              {link.mobileLabel ? (
+                <span className="bottom-nav-label-short">{link.mobileLabel}</span>
+              ) : null}
+            </NavLink>
+          ))}
+        </nav>
     </div>
   );
 }

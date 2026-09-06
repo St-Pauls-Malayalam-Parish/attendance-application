@@ -272,3 +272,14 @@ export const MEMBER_ATTENDANCE_STATUSES = [
   { value: 'upcoming', label: 'Upcoming' },
   { value: 'unmarked', label: 'Not marked' },
 ];
+
+export const FAQ_AUDIENCES = [
+  { value: 'member', label: 'Members' },
+  { value: 'admin', label: 'Admins' },
+  { value: 'both', label: 'Everyone' },
+];
+
+export function formatFaqAudience(value) {
+  const match = FAQ_AUDIENCES.find((option) => option.value === value);
+  return match?.label || value;
+}

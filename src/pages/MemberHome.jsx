@@ -8,6 +8,7 @@ import { FilterPanel } from '../components/FilterPanel.jsx';
 import { Pagination } from '../components/Pagination.jsx';
 import { DateRangeFilters } from '../components/DateRangeFilters.jsx';
 import { useAuth } from '../AuthContext.jsx';
+import { memberLinks } from '../nav/memberLinks.js';
 import { PAGE_SIZE_OPTIONS } from '../utils/pagination.js';
 import { normalizeAttendanceMe } from '../utils/api-data.js';
 
@@ -120,13 +121,7 @@ export function MemberHome() {
   }
 
   return (
-    <Shell
-      links={[
-        { to: '/attendance', label: 'My attendance', mobileLabel: 'Attendance', end: true },
-        { to: '/my-profile', label: 'My profile', mobileLabel: 'Profile' },
-        { to: '/account', label: 'Account' },
-      ]}
-    >
+    <Shell links={memberLinks}>
       <section className="page-head">
         <div>
           <p className="eyebrow">My attendance</p>

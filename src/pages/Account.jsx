@@ -1,12 +1,7 @@
 import { Shell } from '../components/Shell.jsx';
 import { ChangePasswordForm } from '../components/ChangePasswordForm.jsx';
 import { useAuth } from '../AuthContext.jsx';
-
-const memberLinks = [
-  { to: '/attendance', label: 'My attendance', end: true },
-  { to: '/my-profile', label: 'My profile' },
-  { to: '/account', label: 'Account' },
-];
+import { memberLinks } from '../nav/memberLinks.js';
 
 export function Account({ admin = false }) {
   const { user, setUser } = useAuth();

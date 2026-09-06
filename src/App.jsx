@@ -9,6 +9,8 @@ import { AdminEvents } from './pages/AdminEvents.jsx';
 import { AdminAttendance } from './pages/AdminAttendance.jsx';
 import { AdminMembers } from './pages/AdminMembers.jsx';
 import { AdminMemberProfile } from './pages/AdminMemberProfile.jsx';
+import { AdminFaqs } from './pages/AdminFaqs.jsx';
+import { MemberFaqs } from './pages/MemberFaqs.jsx';
 import { Account } from './pages/Account.jsx';
 import { ChangePassword } from './pages/ChangePassword.jsx';
 
@@ -22,6 +24,7 @@ export default function App() {
         <Route index element={<Navigate to="attendance" replace />} />
         <Route path="attendance" element={<MemberHome />} />
         <Route path="my-profile" element={<MemberProfile />} />
+        <Route path="faqs" element={<MemberFaqs />} />
         <Route path="account" element={<Account />} />
       </Route>
       <Route element={<ProtectedRoute adminOnly />}>
@@ -32,6 +35,7 @@ export default function App() {
           <Route path="attendance/:eventId" element={<AdminAttendance />} />
           <Route path="members" element={<AdminMembers />} />
           <Route path="members/:memberId/profile" element={<AdminMemberProfile />} />
+          <Route path="faqs" element={<AdminFaqs />} />
           <Route path="account" element={<Account admin />} />
         </Route>
       </Route>

@@ -55,7 +55,8 @@ a {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -550,7 +551,8 @@ a.text-link:hover {
 }
 
 input,
-select {
+select,
+textarea {
   width: 100%;
   margin-top: 0.35rem;
   padding: 0.7rem 0.8rem;
@@ -561,7 +563,8 @@ select {
 }
 
 input:focus-visible,
-select:focus-visible {
+select:focus-visible,
+textarea:focus-visible {
   outline: none;
   border-color: var(--wine);
   box-shadow: 0 0 0 3px rgba(123, 45, 59, 0.15);
@@ -2220,8 +2223,8 @@ tr.editing td {
   box-shadow: 0 24px 48px rgba(44, 36, 28, 0.18);
 }
 
-.member-form-panel {
-  width: min(92vw, 640px);
+.event-form-panel.card {
+  margin-bottom: 0;
 }
 
 .member-profile-modal-panel .member-profile-current {
@@ -2241,7 +2244,7 @@ tr.editing td {
 
 .event-form-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
   margin-bottom: 1rem;
@@ -2257,8 +2260,15 @@ tr.editing td {
 }
 
 .event-form label input,
-.event-form label select {
+.event-form label select,
+.event-form label textarea {
   margin-top: 0;
+}
+
+.event-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
 }
 
 .event-form-actions {
@@ -2715,10 +2725,26 @@ button.confirm-danger:hover:not(:disabled) {
     bottom: 0;
     transform: none;
     width: auto;
+    max-width: none;
     max-height: min(92vh, 100%);
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
     padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .member-form-panel,
+  .faq-form-panel {
+    width: auto;
+    max-width: none;
+  }
+
+  .faq-form {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .faq-form textarea {
+    min-height: 7rem;
   }
 
   .event-form-submit-row {
@@ -2833,5 +2859,132 @@ button.confirm-danger:hover:not(:disabled) {
   .attendance-history-card,
   .attendance-card {
     overflow-x: auto;
+  }
+}
+
+.faq-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.faq-item {
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  background: #fff;
+  overflow: hidden;
+}
+
+.faq-question {
+  cursor: pointer;
+  list-style: none;
+  padding: 0.95rem 1rem;
+  font-weight: 600;
+  color: var(--wine-dark);
+}
+
+.faq-question::-webkit-details-marker {
+  display: none;
+}
+
+.faq-question::after {
+  content: '+';
+  float: right;
+  color: var(--wine);
+  font-size: 1.1rem;
+  line-height: 1.2;
+}
+
+.faq-item[open] .faq-question::after {
+  content: '−';
+}
+
+.faq-answer {
+  padding: 0 1rem 1rem;
+  color: var(--ink);
+}
+
+.faq-answer p {
+  margin: 0 0 0.65rem;
+}
+
+.faq-answer p:last-child {
+  margin-bottom: 0;
+}
+
+.faq-form {
+  align-items: stretch;
+}
+
+@media (min-width: 769px) {
+  .member-form-panel,
+  .faq-form-panel {
+    width: min(92vw, 640px);
+  }
+
+  .faq-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.faq-published-field {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  align-self: start;
+}
+
+.faq-published-field input[type='checkbox'] {
+  width: 1.05rem;
+  height: 1.05rem;
+  margin: 0;
+  padding: 0;
+  flex-shrink: 0;
+  accent-color: var(--wine);
+  border-radius: 0.2rem;
+}
+
+.faq-published-field label {
+  margin: 0;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.faq-admin-help-card {
+  margin-bottom: 1rem;
+}
+
+.faq-admin-table .table-actions-row {
+  justify-content: flex-end;
+}
+
+.faq-admin-card {
+  display: none;
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  padding: 1rem;
+}
+
+.faq-admin-card h3 {
+  margin: 0 0 0.35rem;
+}
+
+.faq-admin-card-answer {
+  margin: 0.75rem 0 1rem;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 760px) {
+  .faq-admin-table {
+    display: none;
+  }
+
+  .faq-admin-card {
+    display: block;
+  }
+
+  .data-cards {
+    display: grid;
+    gap: 0.75rem;
   }
 }

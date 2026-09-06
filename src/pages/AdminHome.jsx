@@ -8,6 +8,7 @@ export function AdminHome() {
         { to: '/admin/events', label: 'Events', end: true },
         { to: '/admin/attendance', label: 'Take attendance', mobileLabel: 'Attendance' },
         { to: '/admin/members', label: 'Members' },
+        { to: '/admin/faqs', label: 'FAQs' },
         { to: '/admin/account', label: 'Account' },
       ]}
     >

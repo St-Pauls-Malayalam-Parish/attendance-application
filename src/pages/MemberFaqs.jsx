@@ -1,29 +1,31 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
+import { FaqAccordion } from '../components/FaqAccordion.jsx';
 import { Shell } from '../components/Shell.jsx';
-import { MemberProfileDisplay } from '../components/MemberProfileDisplay.jsx';
 import { useAuth } from '../AuthContext.jsx';
 import { memberLinks } from '../nav/memberLinks.js';
 
-export function MemberProfile() {
+export function MemberFaqs() {
   const { user } = useAuth();
-  const [profile, setProfile] = useState(null);
+  const [faqs, setFaqs] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const pending = user.approvalStatus === 'pending';
 
   useEffect(() => {
     if (pending) {
-      setProfile(null);
+      setFaqs([]);
       setLoading(false);
       return undefined;
     }
 
     let cancelled = false;
     setLoading(true);
-    api('/api/auth/my-profile')
+    api('/api/faqs')
       .then((data) => {
-        if (!cancelled) setProfile(data.profile);
+        if (!cancelled) {
+          setFaqs(Array.isArray(data.faqs) ? data.faqs : []);
+        }
       })
       .catch((err) => {
         if (!cancelled) setError(err.message);
@@ -41,30 +43,32 @@ export function MemberProfile() {
     <Shell links={memberLinks}>
       <section className="page-head">
         <div>
-          <p className="eyebrow">My profile</p>
-          <h1>{user.name}</h1>
+          <p className="eyebrow">Help</p>
+          <h1>Help &amp; FAQs</h1>
           <p className="lede">
-            Your voice range, choir pathway, and feedback from the choir team.
+            {pending
+              ? 'Once a choir admin approves your account, help articles will appear here.'
+              : 'Answers to common questions about choir attendance and your account.'}
           </p>
         </div>
       </section>
 
-      {pending ? (
-        <section className="card">
-          <h2>Waiting for approval</h2>
-          <p className="lede">
-            Your choir profile will appear here after an admin approves your account.
-          </p>
-        </section>
-      ) : null}
-
       {error ? <p className="alert">{error}</p> : null}
 
-      {loading && !pending ? <p className="muted">Loading your profile…</p> : null}
-
-      {!pending && !loading && profile ? (
-        <MemberProfileDisplay profile={profile} voicePart={user.voicePart} />
-      ) : null}
+      <div className="card">
+        {loading ? (
+          <p className="muted">Loading help articles…</p>
+        ) : (
+          <FaqAccordion
+            faqs={faqs}
+            emptyMessage={
+              pending
+                ? 'No help articles are available while your account is pending approval.'
+                : 'No help articles yet. Ask a choir admin if you need assistance.'
+            }
+          />
+        )}
+      </div>
     </Shell>
   );
 }

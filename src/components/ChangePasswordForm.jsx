@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
+import { StatusMessage } from './StatusMessage.jsx';
+import { MIN_PASSWORD_LENGTH, validatePassword } from '../utils/password.js';
 
 export function ChangePasswordForm({ required = false, onSuccess }) {
   const navigate = useNavigate();
@@ -8,6 +10,7 @@ export function ChangePasswordForm({ required = false, onSuccess }) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [newPasswordError, setNewPasswordError] = useState('');
   const [saved, setSaved] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -15,6 +18,13 @@ export function ChangePasswordForm({ required = false, onSuccess }) {
     event.preventDefault();
     setError('');
     setSaved('');
+
+    const nextPasswordError = validatePassword(newPassword, { required: true });
+    if (nextPasswordError) {
+      setNewPasswordError(nextPasswordError);
+      return;
+    }
+    setNewPasswordError('');
 
     if (newPassword !== confirmPassword) {
       setError('New passwords do not match');
@@ -52,11 +62,11 @@ export function ChangePasswordForm({ required = false, onSuccess }) {
       <h2>{required ? 'Set your password' : 'Change password'}</h2>
       <p className="muted">
         {required
-          ? 'This is your first sign-in. Choose a personal password (at least 8 characters) before continuing.'
-          : 'Use at least 8 characters. You will stay signed in after saving.'}
+          ? `This is your first sign-in. Choose a personal password (at least ${MIN_PASSWORD_LENGTH} characters) before continuing.`
+          : `Use at least ${MIN_PASSWORD_LENGTH} characters. You will stay signed in after saving.`}
       </p>
       {error ? <p className="alert">{error}</p> : null}
-      {saved ? <p className="ok">{saved}</p> : null}
+      <StatusMessage message={saved} onDismiss={() => setSaved('')} />
       <label>
         Current password
         <input
@@ -72,18 +82,34 @@ export function ChangePasswordForm({ required = false, onSuccess }) {
         <input
           type="password"
           autoComplete="new-password"
-          minLength={8}
+          minLength={MIN_PASSWORD_LENGTH}
           value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
+          onChange={(e) => {
+            setNewPassword(e.target.value);
+            if (newPasswordError) {
+              setNewPasswordError('');
+            }
+          }}
           required
+          aria-invalid={newPasswordError ? 'true' : undefined}
+          aria-describedby={newPasswordError ? 'new-password-error' : 'new-password-hint'}
         />
+        {newPasswordError ? (
+          <span className="field-error" id="new-password-error" role="alert">
+            {newPasswordError}
+          </span>
+        ) : (
+          <span className="field-hint" id="new-password-hint">
+            At least {MIN_PASSWORD_LENGTH} characters.
+          </span>
+        )}
       </label>
       <label>
         Confirm new password
         <input
           type="password"
           autoComplete="new-password"
-          minLength={8}
+          minLength={MIN_PASSWORD_LENGTH}
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           required

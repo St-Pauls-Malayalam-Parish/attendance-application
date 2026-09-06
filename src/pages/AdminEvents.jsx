@@ -5,6 +5,8 @@ import { EventCard } from '../components/EventCard.jsx';
 import { EventCalendar } from '../components/EventCalendar.jsx';
 import { EventDetailPanel } from '../components/EventDetailPanel.jsx';
 import { ConfirmDialog } from '../components/ConfirmDialog.jsx';
+import { StatusMessage } from '../components/StatusMessage.jsx';
+import { useConfirmDialog } from '../hooks/useConfirmDialog.js';
 import { EventFormModal } from '../components/EventFormModal.jsx';
 import { EventFiltersForm } from '../components/EventFiltersForm.jsx';
 import { FilterPanel } from '../components/FilterPanel.jsx';
@@ -51,8 +53,10 @@ export function AdminEvents() {
   const [filters, setFilters] = useState(emptyEventFilters);
   const [searchDraft, setSearchDraft] = useState('');
   const [editingId, setEditingId] = useState(null);
-  const [deleteId, setDeleteId] = useState(null);
   const [busy, setBusy] = useState(false);
+  const { confirm, confirmProps } = useConfirmDialog({
+    onError: (err) => setError(err.message),
+  });
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
@@ -206,7 +210,7 @@ export function AdminEvents() {
           <button
             type="button"
             className="ghost danger table-action"
-            onClick={() => run(() => setDeleteId(event.id))}
+            onClick={() => run(() => requestDelete(event.id))}
           >
             Delete
           </button>
@@ -254,10 +258,33 @@ export function AdminEvents() {
     setCalendarDetailOpen(false);
   }
 
+  function requestDelete(eventId) {
+    setError('');
+    setSaved('');
+    confirm({
+      title: 'Delete this event?',
+      description:
+        'This removes the event and all attendance records for it. This cannot be undone.',
+      confirmLabel: 'Delete event',
+      cancelLabel: 'Keep event',
+      tone: 'danger',
+      action: async () => {
+        if (editingId === eventId) {
+          setEditingId(null);
+          setForm(emptyForm());
+          setEventModalOpen(false);
+        }
+        await api(`/api/events/${eventId}`, { method: 'DELETE' });
+        setSaved('Event deleted');
+        await refreshAfterMutation();
+      },
+    });
+  }
+
   function requestDeleteFromModal() {
     if (!editingId) return;
-    setDeleteId(editingId);
     setEventModalOpen(false);
+    requestDelete(editingId);
   }
 
   async function onSubmit() {
@@ -280,28 +307,6 @@ export function AdminEvents() {
       setBusy(false);
     }
   }
-
-  async function confirmDelete() {
-    if (!deleteId) return;
-    setBusy(true);
-    setError('');
-    try {
-      if (editingId === deleteId) {
-        setEditingId(null);
-        setForm(emptyForm());
-        setEventModalOpen(false);
-      }
-      await api(`/api/events/${deleteId}`, { method: 'DELETE' });
-      setDeleteId(null);
-      setSaved('Event deleted');
-      await refreshAfterMutation();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
     <>
       <section className="page-head page-head-with-action">
@@ -316,7 +321,7 @@ export function AdminEvents() {
       </section>
 
       {error ? <p className="alert">{error}</p> : null}
-      {saved ? <p className="ok">{saved}</p> : null}
+      <StatusMessage message={saved} onDismiss={() => setSaved('')} />
 
       <div className="card events-card">
         <div className="events-card-head">
@@ -449,19 +454,7 @@ export function AdminEvents() {
         onDelete={requestDeleteFromModal}
       />
 
-      <ConfirmDialog
-        open={deleteId !== null}
-        onOpenChange={(open) => {
-          if (!open && !busy) setDeleteId(null);
-        }}
-        title="Delete this event?"
-        description="This removes the event and all attendance records for it. This cannot be undone."
-        confirmLabel="Delete event"
-        cancelLabel="Keep event"
-        danger
-        busy={busy}
-        onConfirm={confirmDelete}
-      />
+      <ConfirmDialog {...confirmProps} />
     </>
   );
 }

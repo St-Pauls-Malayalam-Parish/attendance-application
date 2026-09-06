@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, formatDate, formatEventType } from '../api.js';
+import { ConfirmDialog } from '../components/ConfirmDialog.jsx';
+import { StatusMessage } from '../components/StatusMessage.jsx';
+import { useConfirmDialog } from '../hooks/useConfirmDialog.js';
 import { EventCard } from '../components/EventCard.jsx';
 import { EventFiltersForm } from '../components/EventFiltersForm.jsx';
 import { FilterPanel } from '../components/FilterPanel.jsx';
@@ -50,8 +53,10 @@ export function AdminAttendance() {
   const [rosterVoicePart, setRosterVoicePart] = useState('');
   const [event, setEvent] = useState(null);
   const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState('');
+  const { confirm, confirmProps } = useConfirmDialog({
+    onError: (err) => setError(err.message),
+  });
 
   const filtersActive = useMemo(() => filtersAreActive(filters), [filters]);
   const activeFilterCount = useMemo(
@@ -171,25 +176,29 @@ export function AdminAttendance() {
     setRosterVoicePart('');
   }
 
-  async function save() {
-    setBusy(true);
+  function requestSave() {
     setError('');
     setSaved('');
-    try {
-      const records = roster
-        .filter((row) => row.status)
-        .map((row) => ({
-          userId: row.id,
-          status: row.status,
-          notes: row.notes || '',
-        }));
-      await api(`/api/attendance/event/${eventId}`, { method: 'PUT', body: { records } });
-      setSaved('Attendance saved');
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
+    const markedCount = roster.filter((row) => row.status).length;
+
+    confirm({
+      title: 'Save attendance?',
+      description: `This updates attendance for ${markedCount} marked member${markedCount === 1 ? '' : 's'} on this event.`,
+      confirmLabel: 'Save attendance',
+      cancelLabel: 'Keep editing',
+      tone: 'primary',
+      action: async () => {
+        const records = roster
+          .filter((row) => row.status)
+          .map((row) => ({
+            userId: row.id,
+            status: row.status,
+            notes: row.notes || '',
+          }));
+        await api(`/api/attendance/event/${eventId}`, { method: 'PUT', body: { records } });
+        setSaved('Attendance saved');
+      },
+    });
   }
 
   if (!eventId) {
@@ -298,11 +307,20 @@ export function AdminAttendance() {
                 ) : null}
               </p>
             </div>
-            <button type="button" className="attendance-save-desktop" onClick={save} disabled={busy}>
-              {busy ? 'Saving…' : 'Save attendance'}
+            <button
+              type="button"
+              className="attendance-save-desktop"
+              onClick={requestSave}
+              disabled={confirmProps.busy}
+            >
+              {confirmProps.busy ? 'Saving…' : 'Save attendance'}
             </button>
           </div>
-          {saved ? <p className="ok attendance-save-message">{saved}</p> : null}
+          <StatusMessage
+            message={saved}
+            className="attendance-save-message"
+            onDismiss={() => setSaved('')}
+          />
 
           <FilterPanel activeCount={activeRosterFilterCount}>
             <RosterFiltersForm
@@ -380,11 +398,17 @@ export function AdminAttendance() {
         </div>
 
         <div className="attendance-save-bar" aria-live="polite">
-          {saved ? <p className="ok attendance-save-feedback">{saved}</p> : null}
-          <button type="button" onClick={save} disabled={busy}>
-            {busy ? 'Saving…' : 'Save attendance'}
+          <StatusMessage
+            message={saved}
+            className="attendance-save-feedback"
+            onDismiss={() => setSaved('')}
+          />
+          <button type="button" onClick={requestSave} disabled={confirmProps.busy}>
+            {confirmProps.busy ? 'Saving…' : 'Save attendance'}
           </button>
         </div>
+
+        <ConfirmDialog {...confirmProps} />
         </>
       ) : (
         <p className="muted">Loading attendance…</p>

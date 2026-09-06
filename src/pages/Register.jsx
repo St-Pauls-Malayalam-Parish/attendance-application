@@ -1,8 +1,16 @@
 import { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { api, VOICE_PARTS } from '../api.js';
+import { api } from '../api.js';
 import { useAuth } from '../AuthContext.jsx';
 import { AuthLayout } from '../components/AuthLayout.jsx';
+import { MIN_PASSWORD_LENGTH, validatePassword } from '../utils/password.js';
+
+const REGISTER_VOICE_PARTS = [
+  { value: 'soprano', label: 'Soprano' },
+  { value: 'alto', label: 'Alto' },
+  { value: 'tenor', label: 'Tenor' },
+  { value: 'bass', label: 'Bass' },
+];
 
 export function Register() {
   const { user, setUser } = useAuth();
@@ -11,9 +19,10 @@ export function Register() {
     username: '',
     email: '',
     password: '',
-    voicePart: 'other',
+    voicePart: '',
   });
   const [error, setError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [busy, setBusy] = useState(false);
 
   if (user) {
@@ -25,12 +34,23 @@ export function Register() {
 
   function update(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
+    if (key === 'password' && passwordError) {
+      setPasswordError('');
+    }
   }
 
   async function onSubmit(event) {
     event.preventDefault();
-    setBusy(true);
     setError('');
+
+    const nextPasswordError = validatePassword(form.password, { required: true });
+    if (nextPasswordError) {
+      setPasswordError(nextPasswordError);
+      return;
+    }
+    setPasswordError('');
+
+    setBusy(true);
     try {
       const data = await api('/api/auth/register', { method: 'POST', body: form });
       setUser(data.user);
@@ -79,16 +99,32 @@ export function Register() {
           <input
             type="password"
             autoComplete="new-password"
-            minLength={8}
+            minLength={MIN_PASSWORD_LENGTH}
             value={form.password}
             onChange={(e) => update('password', e.target.value)}
             required
+            aria-invalid={passwordError ? 'true' : undefined}
+            aria-describedby={passwordError ? 'register-password-error' : 'register-password-hint'}
           />
+          {passwordError ? (
+            <span className="field-error" id="register-password-error" role="alert">
+              {passwordError}
+            </span>
+          ) : (
+            <span className="field-hint" id="register-password-hint">
+              At least {MIN_PASSWORD_LENGTH} characters.
+            </span>
+          )}
         </label>
         <label>
           Voice part
-          <select value={form.voicePart} onChange={(e) => update('voicePart', e.target.value)}>
-            {VOICE_PARTS.map((part) => (
+          <select
+            value={form.voicePart}
+            onChange={(e) => update('voicePart', e.target.value)}
+            required
+          >
+            <option value="">Select voice part</option>
+            {REGISTER_VOICE_PARTS.map((part) => (
               <option key={part.value} value={part.value}>
                 {part.label}
               </option>

@@ -1,8 +1,9 @@
 import { ProfileHistoryPanel, ProfileSummary } from './ProfileHistoryPanel.jsx';
-import { formatProfileHistoryDate, formatProfileHistoryTime } from '../api.js';
+import { formatProfileHistoryDate, formatProfileHistoryTime, formatVoicePart } from '../api.js';
 
 export function MemberProfileDisplay({ profile, voicePart }) {
   const latestFeedback = profile.feedbackHistory?.[0] ?? null;
+  const voicePartLabel = formatVoicePart(voicePart);
 
   return (
     <div className="member-profile-view">
@@ -10,7 +11,7 @@ export function MemberProfileDisplay({ profile, voicePart }) {
         <div className="member-profile-current">
           <div className="member-profile-current-head">
             <h2>Current</h2>
-            {voicePart ? <span className="profile-voice-badge capitalize">{voicePart}</span> : null}
+            {voicePartLabel ? <span className="profile-voice-badge">{voicePartLabel}</span> : null}
           </div>
           <ProfileSummary profile={profile} />
         </div>

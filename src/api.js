@@ -194,8 +194,13 @@ export const VOICE_PARTS = [
   { value: 'alto', label: 'Alto' },
   { value: 'tenor', label: 'Tenor' },
   { value: 'bass', label: 'Bass' },
-  { value: 'other', label: 'Other' },
 ];
+
+export function formatVoicePart(value) {
+  if (!value || value === 'other') return '';
+  const match = VOICE_PARTS.find((part) => part.value === value);
+  return match?.label || value;
+}
 
 export const CHOIR_PATHWAYS = [
   { value: 'lead-vocalists', label: 'Lead vocalists' },

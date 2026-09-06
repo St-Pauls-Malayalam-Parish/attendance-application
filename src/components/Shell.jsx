@@ -1,15 +1,31 @@
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../AuthContext.jsx';
+import { ConfirmDialog } from './ConfirmDialog.jsx';
+import { useConfirmDialog } from '../hooks/useConfirmDialog.js';
 import { publicUrl } from '../publicUrl.js';
+import { formatVoicePart } from '../api.js';
 
 function roleLabel(user) {
   if (user.role === 'admin') return 'Admin';
   if (user.approvalStatus === 'pending') return 'Pending approval';
-  return user.voicePart;
+  const voicePart = formatVoicePart(user.voicePart);
+  return voicePart || 'Member';
 }
 
 export function Shell({ children, links }) {
   const { user, logout } = useAuth();
+  const { confirm, confirmProps } = useConfirmDialog();
+
+  function requestSignOut() {
+    confirm({
+      title: 'Sign out?',
+      description: 'You will need to sign in again to access choir attendance.',
+      confirmLabel: 'Sign out',
+      cancelLabel: 'Stay signed in',
+      tone: 'default',
+      action: logout,
+    });
+  }
 
   return (
     <div className="app-shell">
@@ -33,7 +49,7 @@ export function Shell({ children, links }) {
             {user.name}
             <small>{roleLabel(user)}</small>
           </span>
-          <button type="button" className="ghost session-signout" onClick={logout}>
+          <button type="button" className="ghost session-signout" onClick={requestSignOut}>
             Sign out
           </button>
         </div>
@@ -51,6 +67,7 @@ export function Shell({ children, links }) {
             </NavLink>
           ))}
         </nav>
+      <ConfirmDialog {...confirmProps} />
     </div>
   );
 }

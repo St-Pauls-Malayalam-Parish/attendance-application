@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { VOICE_PARTS } from '../api.js';
+import { MIN_PASSWORD_LENGTH, validatePassword } from '../utils/password.js';
 
 export function MemberFormModal({
   open,
@@ -9,7 +10,15 @@ export function MemberFormModal({
   busy,
   onSubmit,
   onClose,
+  error = '',
 }) {
+  const [passwordError, setPasswordError] = useState('');
+
+  useEffect(() => {
+    if (!open) {
+      setPasswordError('');
+    }
+  }, [open]);
   useEffect(() => {
     if (!open) return undefined;
 
@@ -35,11 +44,20 @@ export function MemberFormModal({
 
   function handleSubmit(event) {
     event.preventDefault();
+    const nextPasswordError = validatePassword(form.password, { required: !editingId });
+    if (nextPasswordError) {
+      setPasswordError(nextPasswordError);
+      return;
+    }
+    setPasswordError('');
     onSubmit();
   }
 
   function updateField(key, value) {
     onFormChange({ ...form, [key]: value });
+    if (key === 'password' && passwordError) {
+      setPasswordError('');
+    }
   }
 
   return (
@@ -63,6 +81,8 @@ export function MemberFormModal({
             Close
           </button>
         </div>
+
+        {error ? <p className="alert">{error}</p> : null}
 
         <form className="form grid-form event-form member-form" onSubmit={handleSubmit}>
           <label>
@@ -95,17 +115,35 @@ export function MemberFormModal({
             {editingId ? 'Reset password (optional)' : 'Temporary password'}
             <input
               type="password"
-              minLength={editingId ? undefined : 8}
+              minLength={MIN_PASSWORD_LENGTH}
               value={form.password}
               onChange={(e) => updateField('password', e.target.value)}
               required={!editingId}
               placeholder={editingId ? 'Leave blank to keep current password' : ''}
               autoComplete={editingId ? 'new-password' : 'off'}
+              aria-invalid={passwordError ? 'true' : undefined}
+              aria-describedby={passwordError ? 'member-password-error' : 'member-password-hint'}
             />
+            {passwordError ? (
+              <span className="field-error" id="member-password-error" role="alert">
+                {passwordError}
+              </span>
+            ) : (
+              <span className="field-hint" id="member-password-hint">
+                {editingId
+                  ? `If you set a new password, use at least ${MIN_PASSWORD_LENGTH} characters.`
+                  : `At least ${MIN_PASSWORD_LENGTH} characters. The member must change it on first sign-in.`}
+              </span>
+            )}
           </label>
           <label>
             Voice part
-            <select value={form.voicePart} onChange={(e) => updateField('voicePart', e.target.value)}>
+            <select
+              value={form.voicePart}
+              onChange={(e) => updateField('voicePart', e.target.value)}
+              required
+            >
+              <option value="">Select voice part</option>
               {VOICE_PARTS.map((part) => (
                 <option key={part.value} value={part.value}>
                   {part.label}

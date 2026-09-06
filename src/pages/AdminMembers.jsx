@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, VOICE_PARTS, toDateInput, formatChoirPathway } from '../api.js';
 import { ConfirmDialog } from '../components/ConfirmDialog.jsx';
+import { StatusMessage } from '../components/StatusMessage.jsx';
+import { useConfirmDialog } from '../hooks/useConfirmDialog.js';
 import { FilterPanel } from '../components/FilterPanel.jsx';
 import { MemberCard } from '../components/MemberCard.jsx';
 import { MemberFormModal } from '../components/MemberFormModal.jsx';
@@ -13,6 +15,7 @@ import {
   memberFiltersAreActive,
   memberFiltersToParams,
 } from '../utils/member-filters.js';
+import { validatePassword } from '../utils/password.js';
 import { PAGE_SIZE_OPTIONS } from '../utils/pagination.js';
 import { normalizeMembersLists, normalizeRosterList } from '../utils/api-data.js';
 
@@ -21,7 +24,7 @@ const emptyForm = {
   username: '',
   email: '',
   password: '',
-  voicePart: 'other',
+  voicePart: '',
 };
 
 const emptyPagination = () => ({
@@ -63,10 +66,11 @@ export function AdminMembers() {
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [confirmDialog, setConfirmDialog] = useState(null);
-  const [confirmBusy, setConfirmBusy] = useState(false);
   const [memberModalOpen, setMemberModalOpen] = useState(false);
   const [profileMember, setProfileMember] = useState(null);
+  const { confirm, confirmProps } = useConfirmDialog({
+    onError: (err) => setError(err.message),
+  });
 
   const filtersActive = useMemo(() => memberFiltersAreActive(filters), [filters]);
   const activeFilterCount = useMemo(
@@ -170,7 +174,7 @@ export function AdminMembers() {
       username: member.username,
       email: member.email,
       password: '',
-      voicePart: member.voicePart || 'other',
+      voicePart: member.voicePart === 'other' ? '' : member.voicePart || '',
     });
     setMemberModalOpen(true);
   }
@@ -195,6 +199,12 @@ export function AdminMembers() {
   }
 
   async function onSubmit() {
+    const passwordError = validatePassword(form.password, { required: !editingId });
+    if (passwordError) {
+      setError(passwordError);
+      return;
+    }
+
     setBusy(true);
     setError('');
     setSaved('');
@@ -224,31 +234,41 @@ export function AdminMembers() {
     }
   }
 
-  async function setApproval(id, approvalStatus) {
+  function requestApproval(member, approvalStatus) {
     setError('');
     setSaved('');
-    try {
-      await api(`/api/members/${id}/approval`, {
-        method: 'PATCH',
-        body: { approvalStatus },
-      });
-      await refreshAll();
-    } catch (err) {
-      setError(err.message);
-    }
+    const isApprove = approvalStatus === 'approved';
+
+    confirm({
+      title: isApprove ? `Approve ${member.name}?` : `Decline ${member.name}?`,
+      description: isApprove
+        ? 'They can sign in and view their attendance once approved.'
+        : 'They will not be able to sign in until an admin approves them again.',
+      confirmLabel: isApprove ? 'Approve member' : 'Decline member',
+      cancelLabel: 'Cancel',
+      tone: isApprove ? 'primary' : 'danger',
+      action: async () => {
+        await api(`/api/members/${member.id}/approval`, {
+          method: 'PATCH',
+          body: { approvalStatus },
+        });
+        setSaved(isApprove ? `${member.name} approved` : `${member.name} declined`);
+        await refreshAll();
+      },
+    });
   }
 
   function requestSetActive(member, active) {
     setError('');
     setSaved('');
-    setConfirmDialog({
+    confirm({
       title: active ? `Reactivate ${member.name}?` : `Deactivate ${member.name}?`,
       description: active
         ? 'They can sign in and appear on the roster again.'
         : 'They will be hidden from attendance lists until you reactivate them.',
       confirmLabel: active ? 'Reactivate' : 'Deactivate',
       cancelLabel: 'Cancel',
-      danger: !active,
+      tone: active ? 'primary' : 'danger',
       action: async () => {
         await api(`/api/members/${member.id}/active`, {
           method: 'PATCH',
@@ -266,13 +286,13 @@ export function AdminMembers() {
   function requestRemoveMember(member) {
     setError('');
     setSaved('');
-    setConfirmDialog({
+    confirm({
       title: `Delete ${member.name} permanently?`,
       description:
         'This cannot be undone and removes all attendance records for this member.',
       confirmLabel: 'Delete permanently',
       cancelLabel: 'Keep member',
-      danger: true,
+      tone: 'danger',
       action: async () => {
         await api(`/api/members/${member.id}`, { method: 'DELETE' });
         if (editingId === member.id) {
@@ -282,20 +302,6 @@ export function AdminMembers() {
         await refreshAll();
       },
     });
-  }
-
-  async function handleConfirm() {
-    if (!confirmDialog?.action) return;
-    setConfirmBusy(true);
-    setError('');
-    try {
-      await confirmDialog.action();
-      setConfirmDialog(null);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setConfirmBusy(false);
-    }
   }
 
   function setActive(member, active) {
@@ -326,8 +332,8 @@ export function AdminMembers() {
         </button>
       </section>
 
-      {error ? <p className="alert">{error}</p> : null}
-      {saved ? <p className="ok">{saved}</p> : null}
+      {error && !memberModalOpen ? <p className="alert">{error}</p> : null}
+      <StatusMessage message={saved} onDismiss={() => setSaved('')} />
 
       <div className="card">
         <h2>Waiting for approval {pending.length ? `(${pending.length})` : ''}</h2>
@@ -357,14 +363,14 @@ export function AdminMembers() {
                         <button
                           type="button"
                           className="table-action primary"
-                          onClick={() => setApproval(member.id, 'approved')}
+                          onClick={() => requestApproval(member, 'approved')}
                         >
                           Approve
                         </button>
                         <button
                           type="button"
                           className="ghost danger table-action"
-                          onClick={() => setApproval(member.id, 'rejected')}
+                          onClick={() => requestApproval(member, 'rejected')}
                         >
                           Decline
                         </button>
@@ -392,14 +398,14 @@ export function AdminMembers() {
                       <button
                         type="button"
                         className="table-action primary"
-                        onClick={() => setApproval(member.id, 'approved')}
+                        onClick={() => requestApproval(member, 'approved')}
                       >
                         Approve
                       </button>
                       <button
                         type="button"
                         className="ghost danger table-action"
-                        onClick={() => setApproval(member.id, 'rejected')}
+                        onClick={() => requestApproval(member, 'rejected')}
                       >
                         Decline
                       </button>
@@ -711,7 +717,7 @@ export function AdminMembers() {
                         <button
                           type="button"
                           className="table-action primary"
-                          onClick={() => setApproval(member.id, 'approved')}
+                          onClick={() => requestApproval(member, 'approved')}
                         >
                           Approve anyway
                         </button>
@@ -739,7 +745,7 @@ export function AdminMembers() {
                       <button
                         type="button"
                         className="table-action primary"
-                        onClick={() => setApproval(member.id, 'approved')}
+                        onClick={() => requestApproval(member, 'approved')}
                       >
                         Approve anyway
                       </button>
@@ -767,6 +773,7 @@ export function AdminMembers() {
         busy={busy}
         onSubmit={onSubmit}
         onClose={closeMemberModal}
+        error={error}
       />
 
       <MemberProfileModal
@@ -776,19 +783,7 @@ export function AdminMembers() {
         onSaved={handleProfileSaved}
       />
 
-      <ConfirmDialog
-        open={confirmDialog !== null}
-        onOpenChange={(open) => {
-          if (!open && !confirmBusy) setConfirmDialog(null);
-        }}
-        title={confirmDialog?.title ?? ''}
-        description={confirmDialog?.description ?? ''}
-        confirmLabel={confirmDialog?.confirmLabel ?? 'Confirm'}
-        cancelLabel={confirmDialog?.cancelLabel ?? 'Cancel'}
-        danger={confirmDialog?.danger ?? false}
-        busy={confirmBusy}
-        onConfirm={handleConfirm}
-      />
+      <ConfirmDialog {...confirmProps} />
     </>
   );
 }

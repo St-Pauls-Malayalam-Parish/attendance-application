@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, CHOIR_PATHWAYS } from '../api.js';
 import { ProfileSummary } from './ProfileHistoryPanel.jsx';
+import { StatusMessage } from './StatusMessage.jsx';
 
 const emptyForm = {
   voiceRange: '',
@@ -98,14 +99,10 @@ export function MemberProfileForm({
         method: 'PATCH',
         body: payload,
       });
-      setProfile(data.profile);
-      setForm({
-        voiceRange: data.profile.voiceRange || '',
-        feedback: '',
-        choirPathway: data.profile.choirPathway || '',
-      });
-      setSaved('Saved. The member can see this on My profile.');
-      onSaved?.(data.profile);
+      if (onSaved) {
+        await onSaved(data.profile);
+      }
+      onClose?.();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -132,7 +129,7 @@ export function MemberProfileForm({
       ) : null}
 
       {error ? <p className="alert">{error}</p> : null}
-      {saved ? <p className="ok">{saved}</p> : null}
+      <StatusMessage message={saved} onDismiss={() => setSaved('')} />
 
       <div className="member-profile-current">
         <h2>Current</h2>

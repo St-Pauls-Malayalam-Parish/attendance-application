@@ -1,3 +1,5 @@
+import { formatChoirPathway } from '../api.js';
+
 export function MemberCard({ member, summary, actions, editing = false, statusLabel }) {
   return (
     <article className={`member-card${editing ? ' editing' : ''}`}>
@@ -12,6 +14,18 @@ export function MemberCard({ member, summary, actions, editing = false, statusLa
           <dt>Voice</dt>
           <dd className="capitalize">{member.voicePart}</dd>
         </div>
+        {member.voiceRange ? (
+          <div>
+            <dt>Range</dt>
+            <dd>{member.voiceRange}</dd>
+          </div>
+        ) : null}
+        {member.choirPathway ? (
+          <div>
+            <dt>Pathway</dt>
+            <dd>{formatChoirPathway(member.choirPathway)}</dd>
+          </div>
+        ) : null}
         {statusLabel ? (
           <div>
             <dt>Status</dt>

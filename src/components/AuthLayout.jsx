@@ -13,24 +13,7 @@ export function AuthLayout({ title, children }) {
             decoding="async"
           />
         </picture>
-        <p className="auth-photo-credit">
-          Photo:{' '}
-          <a
-            href="https://commons.wikimedia.org/wiki/File:All_saints_church7.jpg"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Ccmarathe
-          </a>
-          {' · '}
-          <a
-            href="https://creativecommons.org/licenses/by/4.0/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            CC BY 4.0
-          </a>
-        </p>
+        <p className="auth-photo-credit">St Pauls Malayalam Parish, Pune</p>
       </div>
       <section className="auth-panel">
         <div className="auth-panel-inner">

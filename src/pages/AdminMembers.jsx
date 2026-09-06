@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { api, VOICE_PARTS, toDateInput } from '../api.js';
+import { Link } from 'react-router-dom';
+import { api, VOICE_PARTS, toDateInput, formatChoirPathway } from '../api.js';
 import { ConfirmDialog } from '../components/ConfirmDialog.jsx';
 import { FilterPanel } from '../components/FilterPanel.jsx';
 import { MemberCard } from '../components/MemberCard.jsx';
 import { MemberFormModal } from '../components/MemberFormModal.jsx';
+import { MemberProfileModal } from '../components/MemberProfileModal.jsx';
+import { MemberTableActions } from '../components/MemberTableActions.jsx';
 import { Pagination } from '../components/Pagination.jsx';
 import {
   emptyMemberFilters,
@@ -42,28 +45,6 @@ function yearStart() {
   return new Date(new Date().getFullYear(), 0, 1);
 }
 
-function MemberActions({ member, onEdit, onSetActive, onDelete }) {
-  return (
-    <>
-      <button type="button" className="ghost" onClick={() => onEdit(member)}>
-        Edit
-      </button>
-      {member.active ? (
-        <button type="button" className="ghost danger" onClick={() => onSetActive(member, false)}>
-          Deactivate
-        </button>
-      ) : (
-        <button type="button" className="ghost" onClick={() => onSetActive(member, true)}>
-          Reactivate
-        </button>
-      )}
-      <button type="button" className="ghost danger" onClick={() => onDelete(member)}>
-        Delete permanently
-      </button>
-    </>
-  );
-}
-
 export function AdminMembers() {
   const [pending, setPending] = useState([]);
   const [members, setMembers] = useState([]);
@@ -85,6 +66,7 @@ export function AdminMembers() {
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [memberModalOpen, setMemberModalOpen] = useState(false);
+  const [profileMember, setProfileMember] = useState(null);
 
   const filtersActive = useMemo(() => memberFiltersAreActive(filters), [filters]);
   const activeFilterCount = useMemo(
@@ -195,6 +177,21 @@ export function AdminMembers() {
 
   function cancelEdit() {
     closeMemberModal();
+  }
+
+  function startProfile(member) {
+    setError('');
+    setSaved('');
+    setProfileMember(member);
+  }
+
+  function closeProfileModal() {
+    setProfileMember(null);
+  }
+
+  async function handleProfileSaved() {
+    setSaved('Member feedback saved');
+    await refreshAll();
   }
 
   async function onSubmit() {
@@ -320,8 +317,8 @@ export function AdminMembers() {
           <p className="eyebrow">Members</p>
           <h1>Choir members</h1>
           <p className="lede">
-            Approve new sign-ups, edit roster details, filter members, and review attendance rates
-            for a date range.
+            Approve new sign-ups, edit roster details, and enter each member&apos;s voice range,
+            choir pathway, and feedback from the <strong>Feedback</strong> screen.
           </p>
         </div>
         <button type="button" className="page-head-action" onClick={openAddMember}>
@@ -355,23 +352,30 @@ export function AdminMembers() {
                     <td>{member.username}</td>
                     <td>{member.email}</td>
                     <td className="capitalize">{member.voicePart}</td>
-                    <td className="row-actions">
-                      <button type="button" onClick={() => setApproval(member.id, 'approved')}>
-                        Approve
-                      </button>
-                      <button
-                        type="button"
-                        className="ghost danger"
-                        onClick={() => setApproval(member.id, 'rejected')}
-                      >
-                        Decline
-                      </button>
-                      <MemberActions
-                        member={member}
-                        onEdit={startEdit}
-                        onSetActive={setActive}
-                        onDelete={removeMember}
-                      />
+                    <td className="table-actions-cell">
+                      <div className="member-row-actions member-row-actions-wrap">
+                        <button
+                          type="button"
+                          className="table-action primary"
+                          onClick={() => setApproval(member.id, 'approved')}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          type="button"
+                          className="ghost danger table-action"
+                          onClick={() => setApproval(member.id, 'rejected')}
+                        >
+                          Decline
+                        </button>
+                        <MemberTableActions
+                          member={member}
+                          onFeedback={startProfile}
+                          onEdit={startEdit}
+                          onSetActive={setActive}
+                          onDelete={removeMember}
+                        />
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -384,19 +388,24 @@ export function AdminMembers() {
                   key={member.id}
                   member={member}
                   actions={
-                    <div className="row-actions">
-                      <button type="button" onClick={() => setApproval(member.id, 'approved')}>
+                    <div className="member-row-actions member-row-actions-wrap member-card-table-actions">
+                      <button
+                        type="button"
+                        className="table-action primary"
+                        onClick={() => setApproval(member.id, 'approved')}
+                      >
                         Approve
                       </button>
                       <button
                         type="button"
-                        className="ghost danger"
+                        className="ghost danger table-action"
                         onClick={() => setApproval(member.id, 'rejected')}
                       >
                         Decline
                       </button>
-                      <MemberActions
+                      <MemberTableActions
                         member={member}
+                        onFeedback={startProfile}
                         onEdit={startEdit}
                         onSetActive={setActive}
                         onDelete={removeMember}
@@ -412,6 +421,10 @@ export function AdminMembers() {
 
       <div className="card members-card">
         <h2>Roster</h2>
+        <p className="lede muted">
+          Use <strong>Feedback</strong> to enter voice range, choir pathway, and notes. Click a name to
+          view history. Members see their own data on <strong>My profile</strong>.
+        </p>
 
         <FilterPanel activeCount={activeFilterCount}>
           <form className="member-filters" onSubmit={(e) => e.preventDefault()}>
@@ -518,34 +531,48 @@ export function AdminMembers() {
         ) : (
           <>
             <div className="data-list">
-              <table className="data-table">
+              <table className="data-table members-roster-table">
                 <thead>
                   <tr>
-                    <th>Name</th>
-                    <th>Username</th>
-                    <th>Email</th>
-                    <th>Voice</th>
-                    <th>Percentage</th>
-                    <th>Present</th>
-                    <th>Late</th>
-                    <th>Absent</th>
-                    <th></th>
+                    <th className="col-name">Name</th>
+                    <th className="col-email">Email</th>
+                    <th className="col-voice">Voice</th>
+                    <th className="col-range">Range</th>
+                    <th className="col-pathway">Pathway</th>
+                    <th className="col-attendance">Attendance</th>
+                    <th className="actions-col">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {members.map((member) => (
                     <tr key={member.id} className={memberModalOpen && editingId === member.id ? 'editing' : ''}>
-                      <td>{member.name}</td>
-                      <td>{member.username}</td>
-                      <td>{member.email}</td>
-                      <td className="capitalize">{member.voicePart}</td>
-                      <td>{member.summary.rate}%</td>
-                      <td>{member.summary.present}</td>
-                      <td>{member.summary.late}</td>
-                      <td>{member.summary.absent}</td>
-                      <td className="row-actions">
-                        <MemberActions
+                      <td className="col-name">
+                        <Link to={`/admin/members/${member.id}/profile`} className="text-link table-cell-link">
+                          {member.name}
+                        </Link>
+                        <span className="roster-username muted">{member.username}</span>
+                      </td>
+                      <td className="col-email">{member.email}</td>
+                      <td className="col-voice capitalize">{member.voicePart}</td>
+                      <td className="col-range">{member.voiceRange || <span className="muted">—</span>}</td>
+                      <td className="col-pathway">
+                        {member.choirPathway ? (
+                          formatChoirPathway(member.choirPathway)
+                        ) : (
+                          <span className="muted">—</span>
+                        )}
+                      </td>
+                      <td className="col-attendance">
+                        <span className="roster-attendance-rate">{member.summary.rate}%</span>
+                        <span className="roster-attendance-detail muted">
+                          {member.summary.present} present · {member.summary.late} late · {member.summary.absent}{' '}
+                          absent
+                        </span>
+                      </td>
+                      <td className="table-actions-cell">
+                        <MemberTableActions
                           member={member}
+                          onFeedback={startProfile}
                           onEdit={startEdit}
                           onSetActive={setActive}
                           onDelete={removeMember}
@@ -564,12 +591,15 @@ export function AdminMembers() {
                     summary={member.summary}
                     editing={memberModalOpen && editingId === member.id}
                     actions={
-                      <MemberActions
-                        member={member}
-                        onEdit={startEdit}
-                        onSetActive={setActive}
-                        onDelete={removeMember}
-                      />
+                      <div className="member-card-table-actions">
+                        <MemberTableActions
+                          member={member}
+                          onFeedback={startProfile}
+                          onEdit={startEdit}
+                          onSetActive={setActive}
+                          onDelete={removeMember}
+                        />
+                      </div>
                     }
                   />
                 ))}
@@ -619,9 +649,10 @@ export function AdminMembers() {
                     <td>{member.username}</td>
                     <td>{member.email}</td>
                     <td className="capitalize">{member.approvalStatus}</td>
-                    <td className="row-actions">
-                      <MemberActions
+                    <td className="table-actions-cell">
+                      <MemberTableActions
                         member={member}
+                        onFeedback={startProfile}
                         onEdit={startEdit}
                         onSetActive={setActive}
                         onDelete={removeMember}
@@ -639,12 +670,15 @@ export function AdminMembers() {
                   member={member}
                   statusLabel={member.approvalStatus}
                   actions={
-                    <MemberActions
-                      member={member}
-                      onEdit={startEdit}
-                      onSetActive={setActive}
-                      onDelete={removeMember}
-                    />
+                    <div className="member-card-table-actions">
+                      <MemberTableActions
+                        member={member}
+                        onFeedback={startProfile}
+                        onEdit={startEdit}
+                        onSetActive={setActive}
+                        onDelete={removeMember}
+                      />
+                    </div>
                   }
                 />
               ))}
@@ -672,16 +706,23 @@ export function AdminMembers() {
                     <td>{member.name}</td>
                     <td>{member.username}</td>
                     <td>{member.email}</td>
-                    <td className="row-actions">
-                      <button type="button" className="ghost" onClick={() => setApproval(member.id, 'approved')}>
-                        Approve anyway
-                      </button>
-                      <MemberActions
-                        member={member}
-                        onEdit={startEdit}
-                        onSetActive={setActive}
-                        onDelete={removeMember}
-                      />
+                    <td className="table-actions-cell">
+                      <div className="member-row-actions member-row-actions-wrap">
+                        <button
+                          type="button"
+                          className="table-action primary"
+                          onClick={() => setApproval(member.id, 'approved')}
+                        >
+                          Approve anyway
+                        </button>
+                        <MemberTableActions
+                          member={member}
+                          onFeedback={startProfile}
+                          onEdit={startEdit}
+                          onSetActive={setActive}
+                          onDelete={removeMember}
+                        />
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -694,12 +735,17 @@ export function AdminMembers() {
                   key={member.id}
                   member={member}
                   actions={
-                    <div className="row-actions">
-                      <button type="button" className="ghost" onClick={() => setApproval(member.id, 'approved')}>
+                    <div className="member-row-actions member-row-actions-wrap member-card-table-actions">
+                      <button
+                        type="button"
+                        className="table-action primary"
+                        onClick={() => setApproval(member.id, 'approved')}
+                      >
                         Approve anyway
                       </button>
-                      <MemberActions
+                      <MemberTableActions
                         member={member}
+                        onFeedback={startProfile}
                         onEdit={startEdit}
                         onSetActive={setActive}
                         onDelete={removeMember}
@@ -721,6 +767,13 @@ export function AdminMembers() {
         busy={busy}
         onSubmit={onSubmit}
         onClose={closeMemberModal}
+      />
+
+      <MemberProfileModal
+        open={profileMember !== null}
+        member={profileMember}
+        onClose={closeProfileModal}
+        onSaved={handleProfileSaved}
       />
 
       <ConfirmDialog

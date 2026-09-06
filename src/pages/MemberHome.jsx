@@ -123,6 +123,7 @@ export function MemberHome() {
     <Shell
       links={[
         { to: '/attendance', label: 'My attendance', mobileLabel: 'Attendance', end: true },
+        { to: '/my-profile', label: 'My profile', mobileLabel: 'Profile' },
         { to: '/account', label: 'Account' },
       ]}
     >

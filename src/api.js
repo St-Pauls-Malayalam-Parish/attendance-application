@@ -197,6 +197,46 @@ export const VOICE_PARTS = [
   { value: 'other', label: 'Other' },
 ];
 
+export const CHOIR_PATHWAYS = [
+  { value: 'lead-vocalists', label: 'Lead vocalists' },
+  { value: 'emerging-vocalists', label: 'Emerging vocalists' },
+  { value: 'vocal-strengthening', label: 'Vocal Strengthening' },
+  { value: 'vocal-development', label: 'Vocal Development' },
+  { value: 'explore-other-service', label: 'Explore other areas of service' },
+];
+
+export function formatChoirPathway(value) {
+  if (!value) return 'Not set';
+  const match = CHOIR_PATHWAYS.find((pathway) => pathway.value === value);
+  return match?.label || value;
+}
+
+export function formatProfileDate(value) {
+  return new Date(value).toLocaleString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+export function formatProfileHistoryDate(value) {
+  return new Date(value).toLocaleDateString('en-IN', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+export function formatProfileHistoryTime(value) {
+  return new Date(value).toLocaleTimeString('en-IN', {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 export const EVENT_TYPES = [
   { value: 'practice', label: 'Practice' },
   { value: 'service', label: 'Service' },

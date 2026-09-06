@@ -4,6 +4,7 @@ import { useAuth } from '../AuthContext.jsx';
 
 const memberLinks = [
   { to: '/attendance', label: 'My attendance', end: true },
+  { to: '/my-profile', label: 'My profile' },
   { to: '/account', label: 'Account' },
 ];
 

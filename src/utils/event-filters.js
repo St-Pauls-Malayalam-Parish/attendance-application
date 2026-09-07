@@ -5,6 +5,8 @@ export const emptyEventFilters = () => ({
   to: '',
   type: '',
   liturgicalColor: '',
+  memberId: '',
+  attendanceStatus: '',
 });
 
 export function eventFiltersToParams(filters, { page, pageSize }) {
@@ -19,6 +21,8 @@ export function eventFiltersToParams(filters, { page, pageSize }) {
   if (filters.to) params.set('to', filters.to);
   if (filters.type) params.set('type', filters.type);
   if (filters.liturgicalColor) params.set('liturgicalColor', filters.liturgicalColor);
+  if (filters.memberId) params.set('memberId', filters.memberId);
+  if (filters.attendanceStatus) params.set('attendanceStatus', filters.attendanceStatus);
 
   return params;
 }

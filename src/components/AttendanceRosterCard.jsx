@@ -1,11 +1,10 @@
-const STATUSES = [
-  { value: 'present', label: 'Present' },
-  { value: 'late', label: 'Late' },
-  { value: 'absent', label: 'Absent' },
-  { value: 'excused', label: 'Excused' },
-];
+import { AttendanceStatusFields } from './AttendanceStatusFields.jsx';
 
 export function AttendanceRosterCard({ member, onUpdate }) {
+  function handleUpdate(patch) {
+    onUpdate(member.id, patch);
+  }
+
   return (
     <article className="roster-card">
       <div className="roster-card-head">
@@ -13,18 +12,8 @@ export function AttendanceRosterCard({ member, onUpdate }) {
         <p className="roster-card-voice capitalize">{member.voicePart}</p>
       </div>
 
-      <div className="status-pills roster-card-status">
-        {STATUSES.map((status) => (
-          <label key={status.value} className={member.status === status.value ? 'selected' : ''}>
-            <input
-              type="radio"
-              name={`status-${member.id}`}
-              checked={member.status === status.value}
-              onChange={() => onUpdate(member.id, { status: status.value })}
-            />
-            {status.label}
-          </label>
-        ))}
+      <div className="roster-card-status">
+        <AttendanceStatusFields member={member} onUpdate={handleUpdate} />
       </div>
 
       <label className="roster-card-notes">
@@ -33,10 +22,9 @@ export function AttendanceRosterCard({ member, onUpdate }) {
           type="text"
           className="notes-input"
           value={member.notes || ''}
-          onChange={(e) => onUpdate(member.id, { notes: e.target.value })}
+          onChange={(e) => handleUpdate({ notes: e.target.value })}
           placeholder="Optional note"
           maxLength={500}
-          disabled={!member.status}
         />
       </label>
     </article>

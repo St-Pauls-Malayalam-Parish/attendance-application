@@ -1,6 +1,6 @@
 import { formatDate, formatEventType } from '../api.js';
+import { AttendanceStatusDisplay } from './AttendanceStatusDisplay.jsx';
 import { LiturgicalColorBadge } from './LiturgicalColorBadge.jsx';
-import { StatusBadge } from './StatusBadge.jsx';
 
 export function AttendanceHistoryCard({ row }) {
   return (
@@ -19,7 +19,7 @@ export function AttendanceHistoryCard({ row }) {
         ) : null}
       </p>
       <div className="history-card-footer">
-        <StatusBadge status={row.status} />
+        <AttendanceStatusDisplay status={row.status} late={row.late} />
         {row.notes ? <p className="history-card-notes">{row.notes}</p> : null}
       </div>
     </article>

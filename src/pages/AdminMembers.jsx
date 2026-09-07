@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api, VOICE_PARTS, toDateInput, formatChoirPathway } from '../api.js';
+import { api, VOICE_PARTS, toDateInput, formatChoirPathway, formatMemberAttendanceDetail, formatAttendanceRate, ROSTER_ATTENDANCE_FILTERS } from '../api.js';
 import { ConfirmDialog } from '../components/ConfirmDialog.jsx';
 import { StatusMessage } from '../components/StatusMessage.jsx';
 import { useConfirmDialog } from '../hooks/useConfirmDialog.js';
@@ -457,6 +457,20 @@ export function AdminMembers() {
               </select>
             </label>
             <label>
+              Attendance
+              <select
+                value={filters.attendanceStatus}
+                onChange={(e) => updateFilter('attendanceStatus', e.target.value)}
+              >
+                <option value="">All attendance</option>
+                {ROSTER_ATTENDANCE_FILTERS.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
               From
               <input
                 type="date"
@@ -569,10 +583,9 @@ export function AdminMembers() {
                         )}
                       </td>
                       <td className="col-attendance">
-                        <span className="roster-attendance-rate">{member.summary.rate}%</span>
+                        <span className="roster-attendance-rate">{formatAttendanceRate(member.summary)}</span>
                         <span className="roster-attendance-detail muted">
-                          {member.summary.present} present · {member.summary.late} late · {member.summary.absent}{' '}
-                          absent
+                          {formatMemberAttendanceDetail(member.summary)}
                         </span>
                       </td>
                       <td className="table-actions-cell">

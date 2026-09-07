@@ -1,14 +1,56 @@
-import { EVENT_TYPES, LITURGICAL_COLORS } from '../api.js';
+import { useEffect, useState } from 'react';
+import { api, EVENT_TYPES, LITURGICAL_COLORS, ROSTER_ATTENDANCE_FILTERS } from '../api.js';
+import { normalizeRosterList } from '../utils/api-data.js';
 
 export function EventFiltersForm({
   searchDraft,
   filters,
   years = [],
   filtersActive,
+  showMemberFilters = false,
   onSearchChange,
   onFilterChange,
   onClear,
 }) {
+  const [members, setMembers] = useState([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+
+  useEffect(() => {
+    if (!showMemberFilters) {
+      return undefined;
+    }
+
+    let cancelled = false;
+    setLoadingMembers(true);
+    api('/api/members/roster?limit=100')
+      .then((data) => {
+        if (!cancelled) {
+          setMembers(normalizeRosterList(data, 100).members);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setMembers([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoadingMembers(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showMemberFilters]);
+
+  function handleMemberChange(value) {
+    onFilterChange('memberId', value);
+    if (!value) {
+      onFilterChange('attendanceStatus', '');
+    }
+  }
+
   return (
     <form className="form grid-form event-filters" onSubmit={(e) => e.preventDefault()}>
       <label className="span-2">
@@ -20,6 +62,42 @@ export function EventFiltersForm({
           placeholder="Search title or notes"
         />
       </label>
+
+      {showMemberFilters ? (
+        <>
+          <label>
+            Member
+            <select
+              value={filters.memberId}
+              onChange={(e) => handleMemberChange(e.target.value)}
+              disabled={loadingMembers}
+            >
+              <option value="">All members</option>
+              {members.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Their attendance
+            <select
+              value={filters.attendanceStatus}
+              onChange={(e) => onFilterChange('attendanceStatus', e.target.value)}
+              disabled={!filters.memberId}
+            >
+              <option value="">Any marked attendance</option>
+              {ROSTER_ATTENDANCE_FILTERS.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </>
+      ) : null}
+
       <label>
         Year
         <select value={filters.year} onChange={(e) => onFilterChange('year', e.target.value)}>

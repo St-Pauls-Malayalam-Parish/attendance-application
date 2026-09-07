@@ -10,6 +10,7 @@ import { FilterPanel } from '../components/FilterPanel.jsx';
 import { AttendanceRosterCard } from '../components/AttendanceRosterCard.jsx';
 import { RosterFiltersForm } from '../components/RosterFiltersForm.jsx';
 import { LiturgicalColorBadge } from '../components/LiturgicalColorBadge.jsx';
+import { AttendanceStatusFields } from '../components/AttendanceStatusFields.jsx';
 import { Pagination } from '../components/Pagination.jsx';
 import {
   normalizeAttendanceEvent,
@@ -20,13 +21,6 @@ import {
   eventFiltersToParams,
   filtersAreActive,
 } from '../utils/event-filters.js';
-
-const STATUSES = [
-  { value: 'present', label: 'Present' },
-  { value: 'late', label: 'Late' },
-  { value: 'absent', label: 'Absent' },
-  { value: 'excused', label: 'Excused' },
-];
 
 const EVENT_PAGE_SIZE = 12;
 
@@ -167,7 +161,16 @@ export function AdminAttendance() {
 
   function updateRow(memberId, patch) {
     setRoster((current) =>
-      current.map((row) => (row.id === memberId ? { ...row, ...patch } : row))
+      current.map((row) => {
+        if (row.id !== memberId) {
+          return row;
+        }
+        const next = { ...row, ...patch };
+        if (patch.status && patch.status !== 'present') {
+          next.late = false;
+        }
+        return next;
+      })
     );
   }
 
@@ -179,22 +182,21 @@ export function AdminAttendance() {
   function requestSave() {
     setError('');
     setSaved('');
-    const markedCount = roster.filter((row) => row.status).length;
+    const memberCount = roster.length;
 
     confirm({
       title: 'Save attendance?',
-      description: `This updates attendance for ${markedCount} marked member${markedCount === 1 ? '' : 's'} on this event.`,
+      description: `This saves attendance for all ${memberCount} member${memberCount === 1 ? '' : 's'}. Anyone not marked present or excused is recorded as absent.`,
       confirmLabel: 'Save attendance',
       cancelLabel: 'Keep editing',
       tone: 'primary',
       action: async () => {
-        const records = roster
-          .filter((row) => row.status)
-          .map((row) => ({
-            userId: row.id,
-            status: row.status,
-            notes: row.notes || '',
-          }));
+        const records = roster.map((row) => ({
+          userId: row.id,
+          status: row.status || 'absent',
+          late: row.status === 'present' ? Boolean(row.late) : false,
+          notes: row.notes || '',
+        }));
         await api(`/api/attendance/event/${eventId}`, { method: 'PUT', body: { records } });
         setSaved('Attendance saved');
       },
@@ -223,6 +225,7 @@ export function AdminAttendance() {
               filters={filters}
               years={years}
               filtersActive={filtersActive}
+              showMemberFilters
               onSearchChange={(value) => updateFilter('search', value)}
               onFilterChange={updateFilter}
               onClear={clearFilters}
@@ -279,8 +282,8 @@ export function AdminAttendance() {
           <p className="eyebrow">Take attendance</p>
           <h1>Take attendance</h1>
           <p className="lede">
-            Mark each singer and add a short note if needed (for example, arrived late or excused
-            for travel).
+            Mark who was present or excused. Anyone left unmarked is saved as absent. For present
+            members, tick Arrived late if they came after the start.
           </p>
         </div>
       </section>
@@ -358,19 +361,10 @@ export function AdminAttendance() {
                     <td>{member.name}</td>
                     <td className="capitalize">{member.voicePart}</td>
                     <td>
-                      <div className="status-pills">
-                        {STATUSES.map((status) => (
-                          <label key={status.value} className={member.status === status.value ? 'selected' : ''}>
-                            <input
-                              type="radio"
-                              name={`status-${member.id}`}
-                              checked={member.status === status.value}
-                              onChange={() => updateRow(member.id, { status: status.value })}
-                            />
-                            {status.label}
-                          </label>
-                        ))}
-                      </div>
+                      <AttendanceStatusFields
+                        member={member}
+                        onUpdate={(patch) => updateRow(member.id, patch)}
+                      />
                     </td>
                     <td>
                       <input
@@ -380,7 +374,6 @@ export function AdminAttendance() {
                         onChange={(e) => updateRow(member.id, { notes: e.target.value })}
                         placeholder="Optional note"
                         maxLength={500}
-                        disabled={!member.status}
                       />
                     </td>
                   </tr>

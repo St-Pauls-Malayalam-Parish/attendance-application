@@ -265,8 +265,8 @@ export const LITURGICAL_COLORS = [
 ];
 
 export const MEMBER_ATTENDANCE_STATUSES = [
-  { value: 'present', label: 'Present' },
-  { value: 'late', label: 'Late' },
+  { value: 'present', label: 'Present (on time)' },
+  { value: 'late', label: 'Present (arrived late)' },
   { value: 'absent', label: 'Absent' },
   { value: 'excused', label: 'Excused' },
   { value: 'upcoming', label: 'Upcoming' },
@@ -279,7 +279,56 @@ export const FAQ_AUDIENCES = [
   { value: 'both', label: 'Everyone' },
 ];
 
+export const ROSTER_ATTENDANCE_FILTERS = [
+  { value: 'present', label: 'Present' },
+  { value: 'late', label: 'Arrived late' },
+  { value: 'absent', label: 'Absent' },
+  { value: 'excused', label: 'Excused' },
+];
+
 export function formatFaqAudience(value) {
   const match = FAQ_AUDIENCES.find((option) => option.value === value);
   return match?.label || value;
+}
+
+export function hasCountableAttendance(summary = {}) {
+  const counted = summary.counted;
+  if (typeof counted === 'number') {
+    return counted > 0;
+  }
+  return (summary.present ?? 0) + (summary.late ?? 0) + (summary.absent ?? 0) > 0;
+}
+
+export function formatAttendanceRate(summary = {}) {
+  if (!hasCountableAttendance(summary)) {
+    return '—';
+  }
+  return `${summary.rate ?? 0}%`;
+}
+
+export function formatMemberAttendanceDetail(summary = {}) {
+  const present = summary.present ?? 0;
+  const late = summary.late ?? 0;
+  const absent = summary.absent ?? 0;
+  const excused = summary.excused ?? 0;
+  const attended = present + late;
+  const parts = [];
+
+  if (attended > 0) {
+    let attendedText = `${attended} present`;
+    if (late > 0) {
+      attendedText += ` (${late} late)`;
+    }
+    parts.push(attendedText);
+  }
+
+  if (absent > 0) {
+    parts.push(`${absent} absent`);
+  }
+
+  if (excused > 0) {
+    parts.push(`${excused} excused`);
+  }
+
+  return parts.length ? parts.join(' · ') : 'No records yet';
 }

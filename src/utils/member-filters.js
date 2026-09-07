@@ -3,6 +3,7 @@ export const emptyMemberFilters = () => ({
   voicePart: '',
   from: '',
   to: '',
+  attendanceStatus: '',
 });
 
 export function memberFiltersToParams(filters, { page, pageSize }) {
@@ -15,6 +16,7 @@ export function memberFiltersToParams(filters, { page, pageSize }) {
   if (filters.voicePart) params.set('voicePart', filters.voicePart);
   if (filters.from) params.set('from', filters.from);
   if (filters.to) params.set('to', filters.to);
+  if (filters.attendanceStatus) params.set('attendanceStatus', filters.attendanceStatus);
 
   return params;
 }

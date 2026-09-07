@@ -342,6 +342,7 @@ export function AdminEvents() {
             filters={filters}
             years={years}
             filtersActive={filtersActive}
+            showMemberFilters
             onSearchChange={(value) => updateFilter('search', value)}
             onFilterChange={updateFilter}
             onClear={clearFilters}

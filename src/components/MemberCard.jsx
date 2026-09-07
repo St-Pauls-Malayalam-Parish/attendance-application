@@ -1,4 +1,4 @@
-import { formatChoirPathway } from '../api.js';
+import { formatChoirPathway, formatAttendanceRate } from '../api.js';
 
 export function MemberCard({ member, summary, actions, editing = false, statusLabel }) {
   return (
@@ -36,20 +36,27 @@ export function MemberCard({ member, summary, actions, editing = false, statusLa
           <>
             <div>
               <dt>Rate</dt>
-              <dd>{summary.rate}%</dd>
+              <dd>{formatAttendanceRate(summary)}</dd>
             </div>
             <div>
               <dt>Present</dt>
-              <dd>{summary.present}</dd>
+              <dd>
+                {(summary.present ?? 0) + (summary.late ?? 0)}
+                {summary.late > 0 ? ` (${summary.late} late)` : ''}
+              </dd>
             </div>
-            <div>
-              <dt>Late</dt>
-              <dd>{summary.late}</dd>
-            </div>
-            <div>
-              <dt>Absent</dt>
-              <dd>{summary.absent}</dd>
-            </div>
+            {summary.absent > 0 ? (
+              <div>
+                <dt>Absent</dt>
+                <dd>{summary.absent}</dd>
+              </div>
+            ) : null}
+            {summary.excused > 0 ? (
+              <div>
+                <dt>Excused</dt>
+                <dd>{summary.excused}</dd>
+              </div>
+            ) : null}
           </>
         ) : null}
       </dl>

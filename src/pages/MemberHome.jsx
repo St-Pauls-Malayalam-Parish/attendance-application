@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { api, formatDate, formatEventType } from '../api.js';
+import { api, formatDate, formatEventType, formatAttendanceRate } from '../api.js';
 import { Shell } from '../components/Shell.jsx';
-import { StatusBadge } from '../components/StatusBadge.jsx';
+import { AttendanceStatusDisplay } from '../components/AttendanceStatusDisplay.jsx';
 import { LiturgicalColorBadge } from '../components/LiturgicalColorBadge.jsx';
 import { AttendanceHistoryCard } from '../components/AttendanceHistoryCard.jsx';
 import { FilterPanel } from '../components/FilterPanel.jsx';
@@ -148,22 +148,34 @@ export function MemberHome() {
         <>
           <div className="stats">
             <article className="stat">
-              <strong>{data.summary.rate}%</strong>
+              <strong>{formatAttendanceRate(data.summary)}</strong>
               <span>Attendance rate</span>
             </article>
             <article className="stat">
               <strong>{data.summary.present}</strong>
-              <span>Present</span>
+              <span>On time</span>
             </article>
-            <article className="stat">
-              <strong>{data.summary.late}</strong>
-              <span>Late</span>
-            </article>
+            {data.summary.late > 0 ? (
+              <article className="stat">
+                <strong>{data.summary.late}</strong>
+                <span>Arrived late</span>
+              </article>
+            ) : null}
             <article className="stat">
               <strong>{data.summary.absent}</strong>
               <span>Absent</span>
             </article>
+            {data.summary.excused > 0 ? (
+              <article className="stat">
+                <strong>{data.summary.excused}</strong>
+                <span>Excused</span>
+              </article>
+            ) : null}
           </div>
+          <p className="muted attendance-rate-note">
+            Your rate uses present and absent records only. Excused services do not change your
+            percentage.
+          </p>
 
           <div className="card attendance-history-card">
             <h2>Your history</h2>
@@ -208,7 +220,7 @@ export function MemberHome() {
                         <th>Event</th>
                         <th>Type</th>
                         <th>Liturgical color</th>
-                        <th>Status</th>
+                        <th>Attendance</th>
                         <th>Notes</th>
                       </tr>
                     </thead>
@@ -222,7 +234,7 @@ export function MemberHome() {
                             <LiturgicalColorBadge color={row.event.liturgicalColor} />
                           </td>
                           <td>
-                            <StatusBadge status={row.status} />
+                            <AttendanceStatusDisplay status={row.status} late={row.late} />
                           </td>
                           <td className="notes-cell">{row.notes || '—'}</td>
                         </tr>

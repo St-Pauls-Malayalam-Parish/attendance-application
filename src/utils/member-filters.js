@@ -4,6 +4,7 @@ export const emptyMemberFilters = () => ({
   from: '',
   to: '',
   attendanceStatus: '',
+  eventId: '',
 });
 
 export function memberFiltersToParams(filters, { page, pageSize }) {
@@ -14,8 +15,12 @@ export function memberFiltersToParams(filters, { page, pageSize }) {
   const search = filters.search.trim();
   if (search) params.set('search', search);
   if (filters.voicePart) params.set('voicePart', filters.voicePart);
-  if (filters.from) params.set('from', filters.from);
-  if (filters.to) params.set('to', filters.to);
+  if (filters.eventId) {
+    params.set('eventId', filters.eventId);
+  } else {
+    if (filters.from) params.set('from', filters.from);
+    if (filters.to) params.set('to', filters.to);
+  }
   if (filters.attendanceStatus) params.set('attendanceStatus', filters.attendanceStatus);
 
   return params;

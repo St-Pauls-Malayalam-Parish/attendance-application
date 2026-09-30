@@ -1,3 +1,5 @@
+import { useId } from 'react';
+
 const STATUSES = [
   { value: 'present', label: 'Present' },
   { value: 'absent', label: 'Absent' },
@@ -5,6 +7,7 @@ const STATUSES = [
 ];
 
 export function AttendanceStatusFields({ member, onUpdate, namePrefix = 'status' }) {
+  const groupId = useId();
   const isPresent = member.status === 'present';
 
   function setStatus(status) {
@@ -21,7 +24,8 @@ export function AttendanceStatusFields({ member, onUpdate, namePrefix = 'status'
           <label key={status.value} className={member.status === status.value ? 'selected' : ''}>
             <input
               type="radio"
-              name={`${namePrefix}-${member.id}`}
+              name={`${namePrefix}-${member.id}-${groupId}`}
+              value={status.value}
               checked={member.status === status.value}
               onChange={() => setStatus(status.value)}
             />

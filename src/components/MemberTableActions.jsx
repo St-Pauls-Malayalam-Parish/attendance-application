@@ -118,35 +118,39 @@ function MemberManageMenu({ member, onEdit, onSetActive, onDelete }) {
               className="action-menu-item"
               onClick={() => runAction(() => onEdit(member))}
             >
-              Edit member
+              {member.role === 'admin' ? 'Edit admin' : 'Edit member'}
             </button>
-            {member.active ? (
-              <button
-                type="button"
-                role="menuitem"
-                className="action-menu-item"
-                onClick={() => runAction(() => onSetActive(member, false))}
-              >
-                Deactivate
-              </button>
-            ) : (
-              <button
-                type="button"
-                role="menuitem"
-                className="action-menu-item"
-                onClick={() => runAction(() => onSetActive(member, true))}
-              >
-                Reactivate
-              </button>
+            {member.role === 'admin' ? null : (
+              <>
+                {member.active ? (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="action-menu-item"
+                    onClick={() => runAction(() => onSetActive(member, false))}
+                  >
+                    Deactivate
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="action-menu-item"
+                    onClick={() => runAction(() => onSetActive(member, true))}
+                  >
+                    Reactivate
+                  </button>
+                )}
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="action-menu-item danger"
+                  onClick={() => runAction(() => onDelete(member))}
+                >
+                  Delete permanently
+                </button>
+              </>
             )}
-            <button
-              type="button"
-              role="menuitem"
-              className="action-menu-item danger"
-              onClick={() => runAction(() => onDelete(member))}
-            >
-              Delete permanently
-            </button>
           </div>,
           document.body
         )

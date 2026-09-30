@@ -11,6 +11,7 @@ export function MemberFormModal({
   onSubmit,
   onClose,
   error = '',
+  disableAdminToggle = false,
 }) {
   const [passwordError, setPasswordError] = useState('');
 
@@ -76,7 +77,15 @@ export function MemberFormModal({
       />
       <div className="event-form-panel member-form-panel card">
         <div className="event-form-head">
-          <h2 id="member-form-title">{editingId ? 'Edit member' : 'Add approved member'}</h2>
+          <h2 id="member-form-title">
+            {editingId
+              ? form.role === 'admin'
+                ? 'Edit admin'
+                : 'Edit member'
+              : form.role === 'admin'
+                ? 'Add admin'
+                : 'Add approved member'}
+          </h2>
           <button type="button" className="ghost event-form-close" onClick={onClose} disabled={busy}>
             Close
           </button>
@@ -151,6 +160,42 @@ export function MemberFormModal({
               ))}
             </select>
           </label>
+
+          <div className="member-access-options span-2">
+            <label className="checkbox-field">
+              <input
+                type="checkbox"
+                checked={form.role === 'admin'}
+                onChange={(e) => {
+                  const admin = e.target.checked;
+                  if (!admin) {
+                    onFormChange({ ...form, role: 'member', onRoster: true });
+                    return;
+                  }
+                  const keepOnRoster = form.role === 'admin' ? form.onRoster === true : Boolean(editingId);
+                  onFormChange({ ...form, role: 'admin', onRoster: keepOnRoster });
+                }}
+                disabled={disableAdminToggle}
+              />
+              <span>Admin access</span>
+            </label>
+            {form.role === 'admin' ? (
+              <label className="checkbox-field">
+                <input
+                  type="checkbox"
+                  checked={form.onRoster === true}
+                  onChange={(e) => onFormChange({ ...form, onRoster: e.target.checked })}
+                />
+                <span>Include on the choir roster and attendance</span>
+              </label>
+            ) : null}
+            <p className="field-hint">
+              {form.role === 'admin'
+                ? 'Admins can manage events, members, and FAQs. Leave the roster option on if they still sing and should be marked with the choir.'
+                : 'Choir members appear on the roster and in take-attendance. Turn on admin access if they should also manage the choir.'}
+              {disableAdminToggle ? ' At least one admin is required, so admin access cannot be turned off.' : ''}
+            </p>
+          </div>
 
           <div className="event-form-actions span-2">
             <div className="row-actions event-form-submit-row">

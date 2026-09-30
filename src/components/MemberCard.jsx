@@ -1,10 +1,14 @@
 import { formatChoirPathway, formatAttendanceRate } from '../api.js';
+import { AttendanceStatusDisplay } from './AttendanceStatusDisplay.jsx';
 
-export function MemberCard({ member, summary, actions, editing = false, statusLabel }) {
+export function MemberCard({ member, summary, eventAttendance = null, actions, editing = false, statusLabel }) {
   return (
     <article className={`member-card${editing ? ' editing' : ''}`}>
       <div className="member-card-main">
-        <h3 className="member-card-name">{member.name}</h3>
+        <h3 className="member-card-name">
+          {member.name}
+          {member.role === 'admin' ? <span className="roster-role-badge">Admin</span> : null}
+        </h3>
         <p className="member-card-username">{member.username}</p>
         <p className="member-card-email">{member.email}</p>
       </div>
@@ -32,7 +36,14 @@ export function MemberCard({ member, summary, actions, editing = false, statusLa
             <dd className="capitalize">{statusLabel}</dd>
           </div>
         ) : null}
-        {summary ? (
+        {eventAttendance ? (
+          <div>
+            <dt>This event</dt>
+            <dd>
+              <AttendanceStatusDisplay status={eventAttendance.status} late={eventAttendance.late} />
+            </dd>
+          </div>
+        ) : summary ? (
           <>
             <div>
               <dt>Rate</dt>

@@ -58,6 +58,7 @@ export function normalizeMembersLists(data) {
     pending: asArray(data?.pending),
     inactive: asArray(data?.inactive),
     declined: asArray(data?.declined),
+    admins: asArray(data?.admins),
   };
 }
 
@@ -70,6 +71,7 @@ export function normalizeRosterList(data, pageSize = 10) {
       dateFiltered: Boolean(data?.meta?.dateFiltered),
       from: data?.meta?.from || '',
       to: data?.meta?.to || '',
+      event: data?.meta?.event || null,
     },
   };
 }

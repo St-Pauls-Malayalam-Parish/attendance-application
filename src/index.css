@@ -516,6 +516,20 @@ a.text-link:hover {
   white-space: nowrap;
 }
 
+.roster-role-badge {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  vertical-align: middle;
+  color: var(--wine);
+  background: color-mix(in srgb, var(--wine) 12%, white);
+}
+
 .roster-attendance-rate {
   display: block;
   font-weight: 600;
@@ -1817,6 +1831,12 @@ td {
   margin-top: 0;
 }
 
+.member-filters label input:disabled,
+.member-filters label select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .member-filters .filter-field-wide {
   width: 100%;
 }
@@ -1906,6 +1926,106 @@ td {
 .filter-summary {
   margin: 0 0 1rem;
   font-size: 0.92rem;
+}
+
+.roster-export-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin: 0 0 1rem;
+}
+
+.roster-export-bar .filter-summary {
+  margin: 0;
+  flex: 1 1 18rem;
+}
+
+.roster-export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.roster-export-actions button {
+  min-height: 2.4rem;
+  padding: 0.45rem 0.95rem;
+}
+
+.roster-export-panel {
+  width: min(92vw, 520px);
+}
+
+.roster-export-note {
+  margin: 0 0 1rem;
+}
+
+.roster-export-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.roster-export-format,
+.roster-export-fields {
+  margin: 0;
+  padding: 0.85rem 1rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.85rem;
+}
+
+.roster-export-format legend,
+.roster-export-fields legend {
+  padding: 0 0.35rem;
+  font-weight: 700;
+}
+
+.roster-export-format {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
+}
+
+.roster-export-field-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.35rem;
+}
+
+.roster-export-field-actions button {
+  min-height: 2rem;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.85rem;
+}
+
+.roster-export-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem 1rem;
+}
+
+.choice-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin: 0;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.choice-field input {
+  width: 1.05rem;
+  height: 1.05rem;
+  margin: 0.15rem 0 0;
+  padding: 0;
+  flex: 0 0 auto;
+  accent-color: var(--wine);
+}
+
+@media (max-width: 560px) {
+  .roster-export-field-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .pagination {
@@ -2169,9 +2289,16 @@ tr.editing td {
   border-color: var(--wine);
 }
 
-.status-pills input {
-  width: auto;
+.status-pills input[type='radio'] {
+  width: 1rem;
+  height: 1rem;
   margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+  flex: 0 0 auto;
 }
 
 .attendance-status-fields {
@@ -2282,6 +2409,40 @@ tr.editing td {
 
 .member-form {
   grid-template-columns: 1fr;
+}
+
+.member-access-options {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.15rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.85rem;
+  background: rgba(255, 248, 236, 0.55);
+}
+
+.member-access-options .field-hint {
+  margin: 0;
+}
+
+.event-form label.checkbox-field {
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 0.65rem;
+  margin: 0;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.event-form label.checkbox-field input[type='checkbox'] {
+  width: 1.05rem;
+  height: 1.05rem;
+  margin: 0.15rem 0 0;
+  padding: 0;
+  flex: 0 0 auto;
+  accent-color: var(--wine);
 }
 
 .event-form-head {

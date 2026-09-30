@@ -32,6 +32,24 @@ describe('member-filters', () => {
     expect(params.get('limit')).toBe('25');
   });
 
+  it('sends an event id and skips the date range', () => {
+    const params = memberFiltersToParams(
+      {
+        ...emptyMemberFilters(),
+        eventId: 'event-1',
+        from: '2026-01-01',
+        to: '2026-01-31',
+        attendanceStatus: 'present',
+      },
+      { page: 1, pageSize: 10 }
+    );
+
+    expect(params.get('eventId')).toBe('event-1');
+    expect(params.get('attendanceStatus')).toBe('present');
+    expect(params.get('from')).toBeNull();
+    expect(params.get('to')).toBeNull();
+  });
+
   it('detects active member filters', () => {
     expect(memberFiltersAreActive(emptyMemberFilters())).toBe(false);
     expect(memberFiltersAreActive({ ...emptyMemberFilters(), attendanceStatus: 'present' })).toBe(

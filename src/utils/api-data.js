@@ -81,7 +81,7 @@ export function normalizeAttendanceEvent(data) {
     event: data?.event ?? null,
     roster: asArray(data?.roster).map((member) => ({
       ...member,
-      status: member.status || 'absent',
+      status: member.status || '',
       late: Boolean(member.late),
     })),
   };

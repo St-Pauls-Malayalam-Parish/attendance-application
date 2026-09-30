@@ -453,6 +453,23 @@ export function AdminMembers() {
                 ))}
               </tbody>
             </table>
+            <div className="data-cards">
+              {admins.map((admin) => (
+                <MemberCard
+                  key={admin.id}
+                  member={{
+                    ...admin,
+                    name: admin.id === currentUser?.id ? `${admin.name} (you)` : admin.name,
+                  }}
+                  statusLabel={admin.onRoster ? 'On roster' : 'Admin only'}
+                  actions={
+                    <button type="button" className="ghost table-action" onClick={() => startEdit(admin)}>
+                      Edit
+                    </button>
+                  }
+                />
+              ))}
+            </div>
           </div>
         )}
       </div>

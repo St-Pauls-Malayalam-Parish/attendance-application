@@ -102,14 +102,16 @@ export function DateRangeFilters({
         </>
       ) : null}
 
-      <label>
-        From
-        <input type="date" value={from} onChange={(e) => onFromChange(e.target.value)} disabled={Boolean(eventId)} />
-      </label>
-      <label>
-        To
-        <input type="date" value={to} onChange={(e) => onToChange(e.target.value)} disabled={Boolean(eventId)} />
-      </label>
+      <div className="filter-dates span-2">
+        <label>
+          From
+          <input type="date" value={from} onChange={(e) => onFromChange(e.target.value)} disabled={Boolean(eventId)} />
+        </label>
+        <label>
+          To
+          <input type="date" value={to} onChange={(e) => onToChange(e.target.value)} disabled={Boolean(eventId)} />
+        </label>
+      </div>
 
       <div className="filter-presets span-2">
         <span className="filter-presets-label">Quick ranges</span>

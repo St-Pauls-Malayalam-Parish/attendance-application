@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { normalizeAttendanceEvent } from '../src/utils/api-data.js';
 
 describe('normalizeAttendanceEvent', () => {
-  it('defaults unmarked roster rows to absent', () => {
+  it('keeps unmarked roster rows unmarked until they are saved', () => {
     const normalized = normalizeAttendanceEvent({
       event: { id: 'event-1', title: 'Practice' },
       roster: [
@@ -12,6 +12,6 @@ describe('normalizeAttendanceEvent', () => {
     });
 
     expect(normalized.roster[0]).toMatchObject({ status: 'present', late: true });
-    expect(normalized.roster[1]).toMatchObject({ status: 'absent', late: false });
+    expect(normalized.roster[1]).toMatchObject({ status: '', late: false });
   });
 });

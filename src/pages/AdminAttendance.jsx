@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, formatDate, formatEventType } from '../api.js';
 import { ConfirmDialog } from '../components/ConfirmDialog.jsx';
@@ -179,6 +179,31 @@ export function AdminAttendance() {
     setRosterVoicePart('');
   }
 
+  const unmarkedCount = filteredRoster.filter((member) => !member.status).length;
+  const lastUnmarkedJump = useRef('');
+
+  function jumpToNextUnmarked() {
+    const pending = filteredRoster.filter((member) => !member.status);
+    const start = pending.findIndex((member) => member.id === lastUnmarkedJump.current);
+    const ordered = start === -1 ? pending : [...pending.slice(start + 1), ...pending.slice(0, start + 1)];
+    const next = ordered
+      .map((member) => ({
+        member,
+        node: [...document.querySelectorAll(`[data-attendance-member="${member.id}"]`)].find(
+          (node) => node.getClientRects().length > 0
+        ),
+      }))
+      .find((item) => item.node);
+
+    if (!next) return;
+
+    lastUnmarkedJump.current = next.member.id;
+    document.querySelectorAll('.is-jump-target').forEach((node) => node.classList.remove('is-jump-target'));
+    next.node.classList.add('is-jump-target');
+    next.node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    window.setTimeout(() => next.node.classList.remove('is-jump-target'), 1600);
+  }
+
   function requestSave() {
     setError('');
     setSaved('');
@@ -336,11 +361,21 @@ export function AdminAttendance() {
             />
           </FilterPanel>
 
-          <p className="muted filter-summary">
-            {rosterFiltersActive
-              ? `${filteredRoster.length} of ${roster.length} member${roster.length === 1 ? '' : 's'} match these filters`
-              : `${roster.length} member${roster.length === 1 ? '' : 's'}`}
-          </p>
+          <div className="attendance-roster-tools">
+            <p className="muted filter-summary">
+              {rosterFiltersActive
+                ? `${filteredRoster.length} of ${roster.length} member${roster.length === 1 ? '' : 's'} match these filters`
+                : `${roster.length} member${roster.length === 1 ? '' : 's'}`}
+              {unmarkedCount > 0
+                ? `. ${unmarkedCount} still unmarked`
+                : ''}
+            </p>
+            {unmarkedCount > 0 ? (
+              <button type="button" className="ghost attendance-jump-desktop" onClick={jumpToNextUnmarked}>
+                Next unmarked
+              </button>
+            ) : null}
+          </div>
 
           {filteredRoster.length === 0 ? (
             <p className="muted">No members match these filters.</p>
@@ -357,10 +392,11 @@ export function AdminAttendance() {
               </thead>
               <tbody>
                 {filteredRoster.map((member) => (
-                  <tr key={member.id}>
+                  <tr key={member.id} data-attendance-member={member.id}>
                     <td>{member.name}</td>
                     <td className="capitalize">{member.voicePart}</td>
                     <td>
+                      {member.status ? null : <p className="roster-card-unmarked">Not marked yet</p>}
                       <AttendanceStatusFields
                         member={member}
                         onUpdate={(patch) => updateRow(member.id, patch)}
@@ -396,6 +432,11 @@ export function AdminAttendance() {
             className="attendance-save-feedback"
             onDismiss={() => setSaved('')}
           />
+          {unmarkedCount > 0 ? (
+            <button type="button" className="ghost attendance-jump-mobile" onClick={jumpToNextUnmarked}>
+              Next unmarked ({unmarkedCount})
+            </button>
+          ) : null}
           <button type="button" onClick={requestSave} disabled={confirmProps.busy}>
             {confirmProps.busy ? 'Saving…' : 'Save attendance'}
           </button>

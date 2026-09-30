@@ -385,6 +385,18 @@ a.text-link:hover {
   font-size: 0.92rem;
 }
 
+.profile-history-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  padding: 1rem;
+}
+
+.profile-history-card .profile-history-date {
+  display: block;
+  margin-bottom: 0.45rem;
+}
+
 .member-profile-history-card .profile-history-table-wrap {
   margin-top: 1.25rem;
 }
@@ -573,6 +585,7 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 0.7rem;
   background: #fff;
+  font-size: 1rem;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -586,12 +599,14 @@ textarea:focus-visible {
 
 .auth-layout {
   min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(360px, 520px);
 }
 
 .page-center {
   min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   place-items: center;
   padding: 2rem;
@@ -791,8 +806,9 @@ textarea:focus-visible {
   }
 
   .auth-hero {
-    min-height: 240px;
-    max-height: 36vh;
+    min-height: 140px;
+    height: 150px;
+    max-height: 160px;
   }
 
   .auth-hero::after {
@@ -1732,11 +1748,33 @@ td {
 
 @media (max-width: 900px) {
   .calendar-day {
-    min-height: 5rem;
+    min-height: 4.6rem;
   }
 
-  .calendar-event .calendar-event-title {
-    display: none;
+  .calendar-event {
+    display: block;
+    min-height: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .calendar-event-time,
+  .calendar-event-title {
+    display: inline;
+    overflow: visible;
+    text-overflow: unset;
+    white-space: nowrap;
+  }
+
+  .calendar-event-time::after {
+    content: ' · ';
+    font-weight: 600;
+  }
+
+  .calendar-detail-sheet {
+    max-height: min(85dvh, calc(100% - 3rem));
+    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -1807,6 +1845,13 @@ td {
 .event-filters label input:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.filter-dates {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+  align-items: end;
 }
 
 .event-filters .filter-presets {
@@ -1909,7 +1954,7 @@ td {
 
 @media (max-width: 480px) {
   .attendance-history-card .event-filters {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -2657,6 +2702,8 @@ button.confirm-danger:hover:not(:disabled) {
   border: 1px solid var(--line);
   border-radius: 0.9rem;
   padding: 1rem;
+  scroll-margin-top: 1rem;
+  scroll-margin-bottom: 8.5rem;
 }
 
 .history-card-date {
@@ -2795,10 +2842,62 @@ button.confirm-danger:hover:not(:disabled) {
   width: 100%;
 }
 
+.roster-notes-toggle {
+  margin-top: 0.75rem;
+}
+
+.roster-card-note-preview {
+  margin: 0.65rem 0 0;
+  color: var(--muted);
+}
+
+.roster-card-unmarked {
+  margin: 0 0 0.65rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--wine);
+}
+
+.attendance-roster-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.attendance-roster-tools .filter-summary {
+  margin: 0;
+  flex: 1 1 16rem;
+}
+
+.attendance-jump-mobile {
+  display: none;
+}
+
 @media (max-width: 768px) {
+  .app-shell {
+    height: 100dvh;
+    max-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .topbar {
+    position: static;
+    flex: 0 0 auto;
+  }
+
   .content {
     width: min(1080px, calc(100% - 1rem));
-    padding: 1rem 0 calc(6rem + env(safe-area-inset-bottom, 0px));
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 1rem 0 1.5rem;
   }
 
   .topbar {
@@ -2849,12 +2948,11 @@ button.confirm-danger:hover:not(:disabled) {
 
   .bottom-nav {
     display: flex;
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    position: static;
+    flex: 0 0 auto;
     z-index: 110;
     gap: 0.2rem;
+    min-height: calc(4.15rem + env(safe-area-inset-bottom, 0px));
     padding: 0.4rem 0.45rem calc(0.45rem + env(safe-area-inset-bottom, 0px));
     background: rgba(255, 248, 236, 0.98);
     border-top: 1px solid var(--line);
@@ -2868,13 +2966,13 @@ button.confirm-danger:hover:not(:disabled) {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0.35rem 0.3rem;
+    padding: 0.35rem 0.25rem;
     border-radius: 0.7rem;
     text-decoration: none;
     text-align: center;
-    font-size: 0.74rem;
+    font-size: 0.8rem;
     font-weight: 600;
-    line-height: 1.2;
+    line-height: 1.15;
     color: var(--muted);
   }
 
@@ -2942,6 +3040,7 @@ button.confirm-danger:hover:not(:disabled) {
     width: auto;
     max-width: none;
     max-height: min(92vh, 100%);
+    max-height: min(92dvh, 100%);
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
     padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
@@ -3001,7 +3100,7 @@ button.confirm-danger:hover:not(:disabled) {
     position: fixed;
     left: 0;
     right: 0;
-    bottom: calc(3.65rem + env(safe-area-inset-bottom, 0px));
+    bottom: calc(4.15rem + env(safe-area-inset-bottom, 0px));
     z-index: 105;
     padding: 0.65rem 0.75rem;
     background: rgba(255, 248, 236, 0.97);
@@ -3024,14 +3123,24 @@ button.confirm-danger:hover:not(:disabled) {
   }
 
   .attendance-card {
-    margin-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+    margin-bottom: 8rem;
+  }
+
+  .roster-notes-toggle {
+    width: 100%;
   }
 
   .nav a,
   .bottom-nav-link,
   .ghost,
   button {
-    min-height: 2.5rem;
+    min-height: 2.75rem;
+  }
+
+  .calendar-event {
+    min-height: 0;
+    padding-top: 0.35rem;
+    padding-bottom: 0.35rem;
   }
 
   .member-card-actions .row-actions {
@@ -3039,12 +3148,66 @@ button.confirm-danger:hover:not(:disabled) {
   }
 
   .preset-row {
-    display: grid;
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding-bottom: 0.15rem;
   }
 
   .preset-row button {
+    width: auto;
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .roster-export-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .roster-export-bar .filter-summary {
+    flex: 0 1 auto;
+  }
+
+  .roster-export-actions,
+  .roster-export-actions button {
     width: 100%;
+  }
+
+  .roster-card .status-pills {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .roster-card .status-pills label {
+    justify-content: center;
+    min-height: 2.75rem;
+    padding: 0.5rem 0.35rem;
+    text-align: center;
+  }
+
+  .roster-card.is-unmarked {
+    border-color: rgba(123, 45, 59, 0.45);
+  }
+
+  .roster-card.is-jump-target,
+  tr.is-jump-target td {
+    box-shadow: inset 0 0 0 2px rgba(123, 45, 59, 0.45);
+  }
+
+  .attendance-roster-tools {
+    align-items: stretch;
+  }
+
+  .attendance-jump-desktop {
+    display: none;
+  }
+
+  .attendance-save-bar .attendance-jump-mobile {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 }
 
@@ -3189,17 +3352,8 @@ button.confirm-danger:hover:not(:disabled) {
   white-space: pre-wrap;
 }
 
-@media (max-width: 760px) {
-  .faq-admin-table {
-    display: none;
-  }
-
+@media (max-width: 768px) {
   .faq-admin-card {
     display: block;
-  }
-
-  .data-cards {
-    display: grid;
-    gap: 0.75rem;
   }
 }

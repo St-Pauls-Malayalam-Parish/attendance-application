@@ -67,7 +67,8 @@ export function ProfileHistoryPanel({ profile }) {
   }
 
   return (
-    <div className="profile-history-table-wrap">
+    <div className="data-list">
+      <div className="profile-history-table-wrap">
       <table className="data-table profile-history-table">
         <thead>
           <tr>
@@ -87,22 +88,43 @@ export function ProfileHistoryPanel({ profile }) {
                   </td>
                 ) : null}
                 <td className="col-update">
-                  <div className="profile-history-update-head">
-                    <span className="profile-history-time">{formatProfileHistoryTime(item.recordedAt)}</span>
-                    <span className="profile-history-type">{item.type}</span>
-                  </div>
-                  {item.isFeedback ? (
-                    <p className="profile-history-feedback">{item.value}</p>
-                  ) : (
-                    <p className="profile-history-value">{item.value}</p>
-                  )}
+                  <HistoryUpdate item={item} />
                 </td>
               </tr>
             ))
           )}
         </tbody>
       </table>
+      </div>
+      <div className="data-cards">
+        {groups.flatMap((group) =>
+          group.items.map((item) => (
+            <article key={item.id} className="profile-history-card">
+              <time className="profile-history-date" dateTime={item.recordedAt}>
+                {formatProfileHistoryDate(item.recordedAt)}
+              </time>
+              <HistoryUpdate item={item} />
+            </article>
+          ))
+        )}
+      </div>
     </div>
+  );
+}
+
+function HistoryUpdate({ item }) {
+  return (
+    <>
+      <div className="profile-history-update-head">
+        <span className="profile-history-time">{formatProfileHistoryTime(item.recordedAt)}</span>
+        <span className="profile-history-type">{item.type}</span>
+      </div>
+      {item.isFeedback ? (
+        <p className="profile-history-feedback">{item.value}</p>
+      ) : (
+        <p className="profile-history-value">{item.value}</p>
+      )}
+    </>
   );
 }
 

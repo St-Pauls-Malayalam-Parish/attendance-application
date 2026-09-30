@@ -34,6 +34,7 @@ export default function App() {
           <Route path="attendance" element={<AdminAttendance />} />
           <Route path="attendance/:eventId" element={<AdminAttendance />} />
           <Route path="members" element={<AdminMembers />} />
+          <Route path="members/manage" element={<AdminMembers />} />
           <Route path="members/:memberId/profile" element={<AdminMemberProfile />} />
           <Route path="faqs" element={<AdminFaqs />} />
           <Route path="account" element={<Account admin />} />

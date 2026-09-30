@@ -174,18 +174,27 @@ function MemberManageMenu({ member, onEdit, onSetActive, onDelete }) {
   );
 }
 
-export function MemberTableActions({ member, onFeedback, onEdit, onSetActive, onDelete }) {
+export function MemberTableActions({
+  member,
+  onFeedback,
+  onEdit,
+  onSetActive,
+  onDelete,
+  showManage = true,
+}) {
   return (
     <div className="member-row-actions">
       <button type="button" className="table-action primary" onClick={() => onFeedback(member)}>
         Feedback
       </button>
-      <MemberManageMenu
-        member={member}
-        onEdit={onEdit}
-        onSetActive={onSetActive}
-        onDelete={onDelete}
-      />
+      {showManage ? (
+        <MemberManageMenu
+          member={member}
+          onEdit={onEdit}
+          onSetActive={onSetActive}
+          onDelete={onDelete}
+        />
+      ) : null}
     </div>
   );
 }

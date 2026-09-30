@@ -1,12 +1,29 @@
+import { Link } from 'react-router-dom';
 import { formatChoirPathway, formatAttendanceRate } from '../api.js';
 import { AttendanceStatusDisplay } from './AttendanceStatusDisplay.jsx';
 
-export function MemberCard({ member, summary, eventAttendance = null, actions, editing = false, statusLabel }) {
+export function MemberCard({
+  member,
+  summary,
+  eventAttendance = null,
+  actions,
+  editing = false,
+  statusLabel,
+  profileTo,
+}) {
+  const name = profileTo ? (
+    <Link to={profileTo} className="text-link">
+      {member.name}
+    </Link>
+  ) : (
+    member.name
+  );
+
   return (
     <article className={`member-card${editing ? ' editing' : ''}`}>
       <div className="member-card-main">
         <h3 className="member-card-name">
-          {member.name}
+          {name}
           {member.role === 'admin' ? <span className="roster-role-badge">Admin</span> : null}
         </h3>
         <p className="member-card-username">{member.username}</p>

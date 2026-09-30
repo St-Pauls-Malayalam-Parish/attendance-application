@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useMatch, useNavigate } from 'react-router-dom';
 import { api, downloadApiFile, VOICE_PARTS, toDateInput, formatDate, formatChoirPathway, formatMemberAttendanceDetail, formatAttendanceRate, ROSTER_ATTENDANCE_FILTERS } from '../api.js';
 import { ConfirmDialog } from '../components/ConfirmDialog.jsx';
 import { StatusMessage } from '../components/StatusMessage.jsx';
@@ -12,6 +12,7 @@ import { MemberProfileModal } from '../components/MemberProfileModal.jsx';
 import { RosterExportDialog } from '../components/RosterExportDialog.jsx';
 import { MemberTableActions } from '../components/MemberTableActions.jsx';
 import { Pagination } from '../components/Pagination.jsx';
+import { ViewToggle } from '../components/ViewToggle.jsx';
 import {
   emptyMemberFilters,
   memberFiltersAreActive,
@@ -55,8 +56,17 @@ function yearStart() {
 
 export function AdminMembers() {
   const { user: currentUser } = useAuth();
+  const navigate = useNavigate();
+  const isManage = Boolean(useMatch({ path: '/admin/members/manage', end: true }));
+  const [manageSection, setManageSection] = useState('choir');
   const [pending, setPending] = useState([]);
   const [members, setMembers] = useState([]);
+  const [choirMembers, setChoirMembers] = useState([]);
+  const [manageSearch, setManageSearch] = useState('');
+  const [manageQuery, setManageQuery] = useState('');
+  const [managePage, setManagePage] = useState(1);
+  const [managePagination, setManagePagination] = useState(emptyPagination);
+  const [loadingChoir, setLoadingChoir] = useState(false);
   const [admins, setAdmins] = useState([]);
   const [inactive, setInactive] = useState([]);
   const [declined, setDeclined] = useState([]);
@@ -96,6 +106,14 @@ export function AdminMembers() {
     return () => clearTimeout(timer);
   }, [searchDraft]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setManageQuery(manageSearch.trim());
+      setManagePage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [manageSearch]);
+
   async function loadLists() {
     const data = await api('/api/members');
     const normalized = normalizeMembersLists(data);
@@ -118,8 +136,22 @@ export function AdminMembers() {
     }
   }
 
+  async function loadChoirMembers(nextPage = managePage, nextQuery = manageQuery, nextPageSize = pageSize) {
+    const params = memberFiltersToParams(
+      { ...emptyMemberFilters(), search: nextQuery },
+      { page: nextPage, pageSize: nextPageSize }
+    );
+    const data = await api(`/api/members/roster?${params}`);
+    const normalized = normalizeRosterList(data, nextPageSize);
+    setChoirMembers(normalized.members);
+    setManagePagination(normalized.pagination);
+    if (normalized.pagination.page !== nextPage) {
+      setManagePage(normalized.pagination.page);
+    }
+  }
+
   async function refreshAll() {
-    await Promise.all([loadLists(), loadRoster()]);
+    await Promise.all([loadLists(), loadRoster(), loadChoirMembers()]);
   }
 
   useEffect(() => {
@@ -131,6 +163,32 @@ export function AdminMembers() {
       .then((data) => setEvents(Array.isArray(data.events) ? data.events : []))
       .catch(() => setEvents([]));
   }, []);
+
+  useEffect(() => {
+    if (manageSection === 'inactive' && inactive.length === 0) setManageSection('choir');
+    if (manageSection === 'declined' && declined.length === 0) setManageSection('choir');
+  }, [manageSection, inactive.length, declined.length]);
+
+  function selectManageSection(next) {
+    setManageSection(next);
+    document.querySelector('.content')?.scrollTo({ top: 0 });
+  }
+
+  useEffect(() => {
+    if (!isManage) return undefined;
+    let cancelled = false;
+    setLoadingChoir(true);
+    loadChoirMembers(managePage, manageQuery, pageSize)
+      .catch((err) => {
+        if (!cancelled) setError(err.message);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingChoir(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isManage, managePage, manageQuery, pageSize]);
 
   useEffect(() => {
     let cancelled = false;
@@ -394,23 +452,156 @@ export function AdminMembers() {
 
   return (
     <>
-      <section className="page-head page-head-with-action">
-        <div>
-          <p className="eyebrow">Members</p>
-          <h1>Choir members</h1>
-          <p className="lede">
-            Approve new sign-ups, edit roster details, and enter each member&apos;s voice range,
-            choir pathway, and feedback from the <strong>Feedback</strong> screen.
-          </p>
+      <section className="page-head">
+        <div className="page-head-with-action">
+          <div>
+            <p className="eyebrow">Members</p>
+            <h1>{isManage ? 'Manage members' : 'Roster'}</h1>
+            <p className="lede">
+              {isManage
+                ? 'Approve new accounts, give admin access, and remove people from the choir.'
+                : 'Use Feedback to enter voice range, choir pathway, and notes. Open a name to view history.'}
+            </p>
+          </div>
+          {isManage ? (
+            <button type="button" className="page-head-action" onClick={openAddMember}>
+              Add member
+            </button>
+          ) : null}
         </div>
-        <button type="button" className="page-head-action" onClick={openAddMember}>
-          Add member
-        </button>
+        <div className="members-view-switch">
+          <ViewToggle
+            label="Members view"
+            value={isManage ? 'manage' : 'roster'}
+            onChange={(next) => navigate(next === 'manage' ? '/admin/members/manage' : '/admin/members')}
+            options={[
+              { value: 'roster', label: 'Roster' },
+              { value: 'manage', label: 'Manage', badge: pending.length || null },
+            ]}
+          />
+        </div>
       </section>
 
       {error && !memberModalOpen ? <p className="alert">{error}</p> : null}
       <StatusMessage message={saved} onDismiss={() => setSaved('')} />
 
+      {isManage ? (
+      <>
+      <div className="manage-section-switch">
+        <ViewToggle
+          label="Manage section"
+          value={manageSection}
+          onChange={selectManageSection}
+          options={[
+            { value: 'choir', label: 'Members' },
+            { value: 'admins', label: 'Admins' },
+            { value: 'approvals', label: 'Approvals', badge: pending.length || null },
+            ...(inactive.length ? [{ value: 'inactive', label: 'Inactive', badge: inactive.length }] : []),
+            ...(declined.length ? [{ value: 'declined', label: 'Declined', badge: declined.length }] : []),
+          ]}
+        />
+      </div>
+      {manageSection === 'choir' ? (
+      <div className="card members-card">
+        <h2>Choir members {managePagination.total ? `(${managePagination.total})` : ''}</h2>
+        <p className="lede muted">
+          Edit a singer, deactivate their sign-in, or delete the account. Attendance history stays
+          until the account is deleted permanently.
+        </p>
+        <label className="manage-member-search">
+          Search
+          <input
+            type="search"
+            value={manageSearch}
+            onChange={(e) => setManageSearch(e.target.value)}
+            placeholder="Search name, username, or email"
+          />
+        </label>
+        {loadingChoir ? (
+          <p className="muted">Loading choir members…</p>
+        ) : choirMembers.length === 0 ? (
+          <p className="muted">
+            {manageQuery ? 'No choir members match this search.' : 'No choir members yet.'}
+          </p>
+        ) : (
+          <>
+            <div className="data-list">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Voice</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {choirMembers.map((member) => (
+                    <tr key={member.id}>
+                      <td>
+                        {member.name}
+                        {member.role === 'admin' ? <span className="roster-role-badge">Admin</span> : null}
+                      </td>
+                      <td>{member.username}</td>
+                      <td>{member.email}</td>
+                      <td className="capitalize">{member.voicePart}</td>
+                      <td className="table-actions-cell">
+                        <MemberTableActions
+                          member={member}
+                          onFeedback={startProfile}
+                          onEdit={startEdit}
+                          onSetActive={setActive}
+                          onDelete={removeMember}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="data-cards">
+                {choirMembers.map((member) => (
+                  <MemberCard
+                    key={member.id}
+                    member={member}
+                    actions={
+                      <div className="member-card-table-actions">
+                        <MemberTableActions
+                          member={member}
+                          onFeedback={startProfile}
+                          onEdit={startEdit}
+                          onSetActive={setActive}
+                          onDelete={removeMember}
+                        />
+                      </div>
+                    }
+                  />
+                ))}
+              </div>
+            </div>
+            <Pagination
+              page={managePagination.page}
+              pageSize={managePagination.pageSize}
+              totalItems={managePagination.total}
+              totalPages={managePagination.totalPages}
+              rangeStart={managePagination.rangeStart}
+              rangeEnd={managePagination.rangeEnd}
+              hasPrevious={managePagination.hasPrevious}
+              hasNext={managePagination.hasNext}
+              onPageChange={setManagePage}
+              onPageSizeChange={(nextPageSize) => {
+                setPageSize(nextPageSize);
+                setManagePage(1);
+              }}
+              itemLabel="members"
+              disabled={loadingChoir}
+            />
+          </>
+        )}
+      </div>
+      ) : null}
+
+      {manageSection === 'admins' ? (
       <div className="card members-card">
         <h2>Administrators {admins.length ? `(${admins.length})` : ''}</h2>
         <p className="lede muted">
@@ -473,7 +664,9 @@ export function AdminMembers() {
           </div>
         )}
       </div>
+      ) : null}
 
+      {manageSection === 'approvals' ? (
       <div className="card">
         <h2>Waiting for approval {pending.length ? `(${pending.length})` : ''}</h2>
         {pending.length === 0 ? (
@@ -563,13 +756,13 @@ export function AdminMembers() {
           </div>
         )}
       </div>
+      ) : null}
+      </>
+      ) : null}
 
+      {!isManage ? (
       <div className="card members-card">
         <h2>Roster</h2>
-        <p className="lede muted">
-          Use <strong>Feedback</strong> to enter voice range, choir pathway, and notes. Click a name to
-          view history. Members see their own data on <strong>My profile</strong>.
-        </p>
 
         <FilterPanel activeCount={activeFilterCount}>
           <form className="member-filters" onSubmit={(e) => e.preventDefault()}>
@@ -775,9 +968,7 @@ export function AdminMembers() {
                         <MemberTableActions
                           member={member}
                           onFeedback={startProfile}
-                          onEdit={startEdit}
-                          onSetActive={setActive}
-                          onDelete={removeMember}
+                          showManage={false}
                         />
                       </td>
                     </tr>
@@ -793,14 +984,13 @@ export function AdminMembers() {
                     summary={member.summary}
                     eventAttendance={member.eventAttendance}
                     editing={memberModalOpen && editingId === member.id}
+                    profileTo={`/admin/members/${member.id}/profile`}
                     actions={
                       <div className="member-card-table-actions">
                         <MemberTableActions
                           member={member}
                           onFeedback={startProfile}
-                          onEdit={startEdit}
-                          onSetActive={setActive}
-                          onDelete={removeMember}
+                          showManage={false}
                         />
                       </div>
                     }
@@ -826,8 +1016,9 @@ export function AdminMembers() {
           </>
         )}
       </div>
+      ) : null}
 
-      {inactive.length > 0 ? (
+      {isManage && manageSection === 'inactive' && inactive.length > 0 ? (
         <div className="card">
           <h2>Inactive ({inactive.length})</h2>
           <p className="muted">
@@ -890,7 +1081,7 @@ export function AdminMembers() {
         </div>
       ) : null}
 
-      {declined.length > 0 ? (
+      {isManage && manageSection === 'declined' && declined.length > 0 ? (
         <div className="card">
           <h2>Declined</h2>
           <div className="data-list">

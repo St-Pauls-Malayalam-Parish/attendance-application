@@ -3,6 +3,11 @@
   "private": true,
   "version": "1.0.0",
   "description": "St Paul's Malayalam Parish choir attendance — web app",
+  "author": {
+    "name": "Rigin Oommen",
+    "email": "riginoommen@gmail.com"
+  },
+  "license": "Apache-2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",

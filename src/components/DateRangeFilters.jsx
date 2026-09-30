@@ -21,6 +21,9 @@ export function DateRangeFilters({
   status = '',
   onStatusChange,
   showEventFilters = false,
+  events = [],
+  eventId = '',
+  onEventChange,
   from,
   to,
   filtersActive,
@@ -44,6 +47,20 @@ export function DateRangeFilters({
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search title or notes"
           />
+        </label>
+      ) : null}
+
+      {onEventChange ? (
+        <label className="span-2">
+          Event
+          <select value={eventId} onChange={(e) => onEventChange(e.target.value)}>
+            <option value="">All events</option>
+            {events.map((event) => (
+              <option key={event.id} value={event.id}>
+                {event.label}
+              </option>
+            ))}
+          </select>
         </label>
       ) : null}
 
@@ -87,11 +104,11 @@ export function DateRangeFilters({
 
       <label>
         From
-        <input type="date" value={from} onChange={(e) => onFromChange(e.target.value)} />
+        <input type="date" value={from} onChange={(e) => onFromChange(e.target.value)} disabled={Boolean(eventId)} />
       </label>
       <label>
         To
-        <input type="date" value={to} onChange={(e) => onToChange(e.target.value)} />
+        <input type="date" value={to} onChange={(e) => onToChange(e.target.value)} disabled={Boolean(eventId)} />
       </label>
 
       <div className="filter-presets span-2">
@@ -100,6 +117,7 @@ export function DateRangeFilters({
           <button
             type="button"
             className="ghost"
+            disabled={Boolean(eventId)}
             onClick={() => applyPreset(toDateInput(daysAgo(30)), toDateInput(new Date()))}
           >
             Last 30 days
@@ -107,6 +125,7 @@ export function DateRangeFilters({
           <button
             type="button"
             className="ghost"
+            disabled={Boolean(eventId)}
             onClick={() => applyPreset(toDateInput(daysAgo(90)), toDateInput(new Date()))}
           >
             Last 3 months
@@ -114,6 +133,7 @@ export function DateRangeFilters({
           <button
             type="button"
             className="ghost"
+            disabled={Boolean(eventId)}
             onClick={() => applyPreset(toDateInput(yearStart()), toDateInput(new Date()))}
           >
             This year

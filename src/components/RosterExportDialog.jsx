@@ -1,16 +1,26 @@
 import { useEffect, useState } from 'react';
 import { fieldsForExport } from '../utils/roster-export-fields.js';
 
-export function RosterExportDialog({ open, eventSelected, busy, onClose, onExport }) {
-  const fields = fieldsForExport(eventSelected);
+export function RosterExportDialog({
+  open,
+  eventSelected = false,
+  fields: fieldsOverride,
+  title = 'Export roster',
+  description = 'The file uses the filters already set on this page. Choose the format and the columns to include.',
+  busy,
+  onClose,
+  onExport,
+}) {
+  const fields = fieldsOverride || fieldsForExport(eventSelected);
+  const fieldKey = fields.map((field) => field.id).join(',');
   const [format, setFormat] = useState('pdf');
   const [selectedIds, setSelectedIds] = useState(() => fields.map((field) => field.id));
 
   useEffect(() => {
     if (!open) return;
     setFormat('pdf');
-    setSelectedIds(fieldsForExport(eventSelected).map((field) => field.id));
-  }, [open, eventSelected]);
+    setSelectedIds(fieldKey ? fieldKey.split(',') : []);
+  }, [open, fieldKey]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -46,7 +56,7 @@ export function RosterExportDialog({ open, eventSelected, busy, onClose, onExpor
   }
 
   return (
-    <div className="event-form-dialog" role="dialog" aria-modal="true" aria-labelledby="roster-export-title">
+    <div className="event-form-dialog" role="dialog" aria-modal="true" aria-labelledby="export-options-title">
       <button
         type="button"
         className="event-form-backdrop"
@@ -56,21 +66,19 @@ export function RosterExportDialog({ open, eventSelected, busy, onClose, onExpor
       />
       <div className="event-form-panel card roster-export-panel">
         <div className="event-form-head">
-          <h2 id="roster-export-title">Export roster</h2>
+          <h2 id="export-options-title">{title}</h2>
           <button type="button" className="ghost event-form-close" onClick={onClose} disabled={busy}>
             Close
           </button>
         </div>
-        <p className="field-hint roster-export-note">
-          The file uses the filters already set on this page. Choose the format and the columns to include.
-        </p>
+        <p className="field-hint roster-export-note">{description}</p>
         <form className="roster-export-form" onSubmit={handleSubmit}>
           <fieldset className="roster-export-format">
             <legend>Format</legend>
             <label className="choice-field">
               <input
                 type="radio"
-                name="roster-export-format"
+                name="export-format"
                 value="pdf"
                 checked={format === 'pdf'}
                 onChange={() => setFormat('pdf')}
@@ -80,7 +88,7 @@ export function RosterExportDialog({ open, eventSelected, busy, onClose, onExpor
             <label className="choice-field">
               <input
                 type="radio"
-                name="roster-export-format"
+                name="export-format"
                 value="xlsx"
                 checked={format === 'xlsx'}
                 onChange={() => setFormat('xlsx')}

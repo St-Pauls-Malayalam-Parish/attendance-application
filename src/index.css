@@ -1036,6 +1036,13 @@ textarea:focus-visible {
   font-size: 1.8rem;
 }
 
+.stat-detail {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -1795,6 +1802,11 @@ td {
 .event-filters label input,
 .event-filters label select {
   margin-top: 0;
+}
+
+.event-filters label input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .event-filters .filter-presets {

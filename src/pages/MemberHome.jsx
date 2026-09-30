@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api, formatDate, formatEventType, formatAttendanceRate } from '../api.js';
+import { api, downloadApiFile, formatDate, formatEventType, formatAttendanceRate } from '../api.js';
 import { Shell } from '../components/Shell.jsx';
 import { AttendanceStatusDisplay } from '../components/AttendanceStatusDisplay.jsx';
 import { LiturgicalColorBadge } from '../components/LiturgicalColorBadge.jsx';
@@ -7,10 +7,12 @@ import { AttendanceHistoryCard } from '../components/AttendanceHistoryCard.jsx';
 import { FilterPanel } from '../components/FilterPanel.jsx';
 import { Pagination } from '../components/Pagination.jsx';
 import { DateRangeFilters } from '../components/DateRangeFilters.jsx';
+import { RosterExportDialog } from '../components/RosterExportDialog.jsx';
 import { useAuth } from '../AuthContext.jsx';
 import { memberLinks } from '../nav/memberLinks.js';
 import { PAGE_SIZE_OPTIONS } from '../utils/pagination.js';
 import { normalizeAttendanceMe } from '../utils/api-data.js';
+import { ATTENDANCE_EXPORT_FIELDS } from '../utils/attendance-export-fields.js';
 
 export function MemberHome() {
   const { user, setUser } = useAuth();
@@ -23,11 +25,15 @@ export function MemberHome() {
   const [type, setType] = useState('');
   const [liturgicalColor, setLiturgicalColor] = useState('');
   const [status, setStatus] = useState('');
+  const [eventId, setEventId] = useState('');
+  const [events, setEvents] = useState([]);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
   const pending = user.approvalStatus === 'pending';
-  const filtersActive = Boolean(from || to || search || type || liturgicalColor || status);
-  const activeFilterCount = [from, to, search, type, liturgicalColor, status].filter(Boolean).length;
+  const filtersActive = Boolean(from || to || search || type || liturgicalColor || status || eventId);
+  const activeFilterCount = [from, to, search, type, liturgicalColor, status, eventId].filter(Boolean).length;
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -48,21 +54,20 @@ export function MemberHome() {
   }, [pending, setUser]);
 
   useEffect(() => {
+    if (pending) return undefined;
+    api('/api/events?limit=100')
+      .then((result) => setEvents(Array.isArray(result.events) ? result.events : []))
+      .catch(() => setEvents([]));
+    return undefined;
+  }, [pending]);
+
+  useEffect(() => {
     if (pending) {
       setData(null);
       return undefined;
     }
-    const params = new URLSearchParams();
-    if (from) params.set('from', from);
-    if (to) params.set('to', to);
-    if (search.trim()) params.set('search', search.trim());
-    if (type) params.set('type', type);
-    if (liturgicalColor) params.set('liturgicalColor', liturgicalColor);
-    if (status) params.set('status', status);
-    params.set('page', String(page));
-    params.set('limit', String(pageSize));
-    const query = params.toString();
-    api(`/api/attendance/me?${query}`)
+    const params = historyParams({ page, pageSize });
+    api(`/api/attendance/me?${params}`)
       .then((result) => {
         const normalized = normalizeAttendanceMe(result);
         setData(normalized);
@@ -72,7 +77,24 @@ export function MemberHome() {
       })
       .catch((err) => setError(err.message));
     return undefined;
-  }, [pending, from, to, search, type, liturgicalColor, status, page, pageSize]);
+  }, [pending, from, to, search, type, liturgicalColor, status, eventId, page, pageSize]);
+
+  function historyParams({ page: nextPage, pageSize: nextPageSize } = {}) {
+    const params = new URLSearchParams();
+    if (eventId) {
+      params.set('eventId', eventId);
+    } else {
+      if (from) params.set('from', from);
+      if (to) params.set('to', to);
+    }
+    if (search.trim()) params.set('search', search.trim());
+    if (type) params.set('type', type);
+    if (liturgicalColor) params.set('liturgicalColor', liturgicalColor);
+    if (status) params.set('status', status);
+    if (nextPage) params.set('page', String(nextPage));
+    if (nextPageSize) params.set('limit', String(nextPageSize));
+    return params;
+  }
 
   function applyRange(nextFrom, nextTo) {
     setError('');
@@ -99,7 +121,34 @@ export function MemberHome() {
     setType('');
     setLiturgicalColor('');
     setStatus('');
+    setEventId('');
     applyRange('', '');
+  }
+
+  function handleEventChange(value) {
+    setError('');
+    setEventId(value);
+    if (value) {
+      setFrom('');
+      setTo('');
+    }
+    setPage(1);
+  }
+
+  async function exportHistory({ format, fields }) {
+    setError('');
+    setExporting(true);
+    try {
+      const params = historyParams();
+      params.set('format', format);
+      params.set('fields', fields.join(','));
+      await downloadApiFile(`/api/attendance/me/export?${params}`);
+      setExportOpen(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setExporting(false);
+    }
   }
 
   function handleTypeChange(value) {
@@ -152,15 +201,14 @@ export function MemberHome() {
               <span>Attendance rate</span>
             </article>
             <article className="stat">
-              <strong>{data.summary.present}</strong>
-              <span>On time</span>
+              <strong>{(data.summary.present ?? 0) + (data.summary.late ?? 0)}</strong>
+              <span>Present</span>
+              {data.summary.late > 0 ? (
+                <span className="stat-detail">
+                  {data.summary.late} arrived late
+                </span>
+              ) : null}
             </article>
-            {data.summary.late > 0 ? (
-              <article className="stat">
-                <strong>{data.summary.late}</strong>
-                <span>Arrived late</span>
-              </article>
-            ) : null}
             <article className="stat">
               <strong>{data.summary.absent}</strong>
               <span>Absent</span>
@@ -173,8 +221,8 @@ export function MemberHome() {
             ) : null}
           </div>
           <p className="muted attendance-rate-note">
-            Your rate uses present and absent records only. Excused services do not change your
-            percentage.
+            The rate is present divided by present plus absent. Arrived late still counts as present.
+            Excused services are left out.
           </p>
 
           <div className="card attendance-history-card">
@@ -192,6 +240,12 @@ export function MemberHome() {
                 onLiturgicalColorChange={handleLiturgicalColorChange}
                 status={status}
                 onStatusChange={handleStatusChange}
+                events={events.map((event) => ({
+                  id: event.id,
+                  label: `${formatDate(event.date)} · ${event.title}`,
+                }))}
+                eventId={eventId}
+                onEventChange={handleEventChange}
                 from={from}
                 to={to}
                 filtersActive={filtersActive}
@@ -202,11 +256,19 @@ export function MemberHome() {
               />
             </FilterPanel>
 
-            <p className="muted filter-summary">
-              {data.pagination.total} of {data.meta?.totalUnfiltered ?? data.pagination.total} event
-              {data.pagination.total === 1 ? '' : 's'} match
-              {filtersActive ? ' these filters' : ''}
-            </p>
+            <div className="roster-export-bar">
+              <p className="muted filter-summary">
+                {data.pagination.total} of {data.meta?.totalUnfiltered ?? data.pagination.total}{' '}
+                {data.pagination.total === 1 ? 'event matches' : 'events match'}
+                {filtersActive ? ' these filters' : ''}
+                {data.meta?.event ? ` for ${data.meta.event.title}` : ''}.
+              </p>
+              <div className="roster-export-actions">
+                <button type="button" className="ghost" onClick={() => setExportOpen(true)} disabled={exporting}>
+                  {exporting ? 'Preparing…' : 'Export'}
+                </button>
+              </div>
+            </div>
 
             {data.pagination.total === 0 ? (
               <p className="muted">No events match these filters.</p>
@@ -272,6 +334,18 @@ export function MemberHome() {
       ) : (
         <p className="muted">Loading your attendance…</p>
       )}
+
+      <RosterExportDialog
+        open={exportOpen}
+        fields={ATTENDANCE_EXPORT_FIELDS}
+        title="Export your history"
+        description="The file uses the filters already set on this page, including a selected event. Choose the format and the columns to include."
+        busy={exporting}
+        onClose={() => {
+          if (!exporting) setExportOpen(false);
+        }}
+        onExport={exportHistory}
+      />
     </Shell>
   );
 }

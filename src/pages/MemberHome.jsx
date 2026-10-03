@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { api, downloadApiFile, formatDate, formatEventType, formatAttendanceRate } from '../api.js';
-import { Shell } from '../components/Shell.jsx';
 import { AttendanceStatusDisplay } from '../components/AttendanceStatusDisplay.jsx';
 import { LiturgicalColorBadge } from '../components/LiturgicalColorBadge.jsx';
 import { AttendanceHistoryCard } from '../components/AttendanceHistoryCard.jsx';
@@ -9,7 +8,6 @@ import { Pagination } from '../components/Pagination.jsx';
 import { DateRangeFilters } from '../components/DateRangeFilters.jsx';
 import { RosterExportDialog } from '../components/RosterExportDialog.jsx';
 import { useAuth } from '../AuthContext.jsx';
-import { memberLinks } from '../nav/memberLinks.js';
 import { PAGE_SIZE_OPTIONS } from '../utils/pagination.js';
 import { normalizeAttendanceMe } from '../utils/api-data.js';
 import { ATTENDANCE_EXPORT_FIELDS } from '../utils/attendance-export-fields.js';
@@ -170,7 +168,7 @@ export function MemberHome() {
   }
 
   return (
-    <Shell links={memberLinks}>
+    <>
       <section className="page-head">
         <div>
           <p className="eyebrow">My attendance</p>
@@ -346,6 +344,6 @@ export function MemberHome() {
         }}
         onExport={exportHistory}
       />
-    </Shell>
+    </>
   );
 }

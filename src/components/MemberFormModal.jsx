@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { VOICE_PARTS } from '../api.js';
+import { emailInputValue, passwordInputValue, usernameInputValue } from '../utils/credential-input.js';
 import { MIN_PASSWORD_LENGTH, validatePassword } from '../utils/password.js';
 
 export function MemberFormModal({
@@ -107,7 +108,7 @@ export function MemberFormModal({
             Username
             <input
               value={form.username}
-              onChange={(e) => updateField('username', e.target.value.toLowerCase())}
+              onChange={(e) => updateField('username', usernameInputValue(e.target.value))}
               required
             />
           </label>
@@ -116,7 +117,7 @@ export function MemberFormModal({
             <input
               type="email"
               value={form.email}
-              onChange={(e) => updateField('email', e.target.value)}
+              onChange={(e) => updateField('email', emailInputValue(e.target.value))}
               required
             />
           </label>
@@ -126,7 +127,7 @@ export function MemberFormModal({
               type="password"
               minLength={MIN_PASSWORD_LENGTH}
               value={form.password}
-              onChange={(e) => updateField('password', e.target.value)}
+              onChange={(e) => updateField('password', passwordInputValue(e.target.value))}
               required={!editingId}
               placeholder={editingId ? 'Leave blank to keep current password' : ''}
               autoComplete={editingId ? 'new-password' : 'off'}

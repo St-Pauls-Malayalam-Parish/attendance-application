@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
-import { Shell } from '../components/Shell.jsx';
 import { MemberProfileDisplay } from '../components/MemberProfileDisplay.jsx';
 import { useAuth } from '../AuthContext.jsx';
-import { memberLinks } from '../nav/memberLinks.js';
 
 export function MemberProfile() {
   const { user } = useAuth();
@@ -38,7 +36,7 @@ export function MemberProfile() {
   }, [pending]);
 
   return (
-    <Shell links={memberLinks}>
+    <>
       <section className="page-head">
         <div>
           <p className="eyebrow">My profile</p>
@@ -65,6 +63,6 @@ export function MemberProfile() {
       {!pending && !loading && profile ? (
         <MemberProfileDisplay profile={profile} voicePart={user.voicePart} />
       ) : null}
-    </Shell>
+    </>
   );
 }

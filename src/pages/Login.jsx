@@ -3,6 +3,7 @@ import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { useAuth } from '../AuthContext.jsx';
 import { AuthLayout } from '../components/AuthLayout.jsx';
+import { passwordInputValue, usernameInputValue } from '../utils/credential-input.js';
 
 export function Login() {
   const { user, setUser } = useAuth();
@@ -55,7 +56,7 @@ export function Login() {
             type="text"
             autoComplete="username"
             value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            onChange={(e) => setUsername(usernameInputValue(e.target.value))}
             required
           />
         </label>
@@ -65,7 +66,7 @@ export function Login() {
             type="password"
             autoComplete="current-password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => setPassword(passwordInputValue(e.target.value))}
             required
           />
         </label>

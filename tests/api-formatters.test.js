@@ -21,9 +21,13 @@ describe('attendance formatters', () => {
   });
 
   describe('formatAttendanceRate', () => {
-    it('shows em dash when there is no countable attendance', () => {
-      expect(formatAttendanceRate({ excused: 1, rate: 0 })).toBe('—');
-      expect(formatAttendanceRate({})).toBe('—');
+    it('shows zero percent when there is no attendance yet', () => {
+      expect(formatAttendanceRate({})).toBe('0%');
+      expect(formatAttendanceRate({ present: 0, absent: 0, rate: 0, counted: 0 })).toBe('0%');
+    });
+
+    it('shows em dash when only excused absences count toward history', () => {
+      expect(formatAttendanceRate({ excused: 1, rate: 0, total: 1 })).toBe('—');
     });
 
     it('shows percentage when countable attendance exists', () => {

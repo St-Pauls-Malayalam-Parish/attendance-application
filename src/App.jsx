@@ -3,6 +3,7 @@ import { ProtectedRoute } from './components/ProtectedRoute.jsx';
 import { Login } from './pages/Login.jsx';
 import { Register } from './pages/Register.jsx';
 import { MemberHome } from './pages/MemberHome.jsx';
+import { MemberLayout } from './pages/MemberLayout.jsx';
 import { MemberProfile } from './pages/MemberProfile.jsx';
 import { AdminHome } from './pages/AdminHome.jsx';
 import { AdminEvents } from './pages/AdminEvents.jsx';
@@ -21,11 +22,13 @@ export default function App() {
       <Route path="/register" element={<Register />} />
       <Route path="/change-password" element={<ChangePassword />} />
       <Route element={<ProtectedRoute />}>
-        <Route index element={<Navigate to="attendance" replace />} />
-        <Route path="attendance" element={<MemberHome />} />
-        <Route path="my-profile" element={<MemberProfile />} />
-        <Route path="faqs" element={<MemberFaqs />} />
-        <Route path="account" element={<Account />} />
+        <Route element={<MemberLayout />}>
+          <Route index element={<Navigate to="attendance" replace />} />
+          <Route path="attendance" element={<MemberHome />} />
+          <Route path="my-profile" element={<MemberProfile />} />
+          <Route path="faqs" element={<MemberFaqs />} />
+          <Route path="account" element={<Account />} />
+        </Route>
       </Route>
       <Route element={<ProtectedRoute adminOnly />}>
         <Route path="/admin" element={<AdminHome />}>

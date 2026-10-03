@@ -7,6 +7,10 @@ export function validatePassword(password, { required = false } = {}) {
     return required ? `Password must be at least ${MIN_PASSWORD_LENGTH} characters` : null;
   }
 
+  if (/\s/.test(value)) {
+    return 'Password cannot contain spaces';
+  }
+
   if (value.length < MIN_PASSWORD_LENGTH) {
     return `Password must be at least ${MIN_PASSWORD_LENGTH} characters`;
   }

@@ -3,6 +3,7 @@ import { Link, Navigate } from 'react-router-dom';
 import { api } from '../api.js';
 import { useAuth } from '../AuthContext.jsx';
 import { AuthLayout } from '../components/AuthLayout.jsx';
+import { emailInputValue, passwordInputValue, usernameInputValue } from '../utils/credential-input.js';
 import { MIN_PASSWORD_LENGTH, validatePassword } from '../utils/password.js';
 
 const REGISTER_VOICE_PARTS = [
@@ -79,7 +80,7 @@ export function Register() {
             autoComplete="username"
             minLength={3}
             value={form.username}
-            onChange={(e) => update('username', e.target.value.toLowerCase())}
+            onChange={(e) => update('username', usernameInputValue(e.target.value))}
             placeholder="e.g. firstname.lastname"
             required
           />
@@ -90,7 +91,7 @@ export function Register() {
             type="email"
             autoComplete="email"
             value={form.email}
-            onChange={(e) => update('email', e.target.value)}
+            onChange={(e) => update('email', emailInputValue(e.target.value))}
             required
           />
         </label>
@@ -101,7 +102,7 @@ export function Register() {
             autoComplete="new-password"
             minLength={MIN_PASSWORD_LENGTH}
             value={form.password}
-            onChange={(e) => update('password', e.target.value)}
+            onChange={(e) => update('password', passwordInputValue(e.target.value))}
             required
             aria-invalid={passwordError ? 'true' : undefined}
             aria-describedby={passwordError ? 'register-password-error' : 'register-password-hint'}

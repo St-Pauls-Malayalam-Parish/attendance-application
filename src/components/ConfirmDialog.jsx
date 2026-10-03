@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import * as AlertDialog from '@radix-ui/react-alert-dialog';
+import { syncVisibleViewport } from '../utils/visible-viewport.js';
 
 const TONE_CLASS = {
   default: 'confirm-primary',
@@ -20,6 +22,22 @@ export function ConfirmDialog({
 }) {
   const resolvedTone = danger ? 'danger' : tone;
   const confirmClass = TONE_CLASS[resolvedTone] ?? TONE_CLASS.default;
+
+  useEffect(() => {
+    document.body.classList.toggle('confirm-dialog-open', open);
+    if (!open) return undefined;
+
+    syncVisibleViewport();
+    const sync = () => syncVisibleViewport();
+    window.visualViewport?.addEventListener('resize', sync);
+    window.visualViewport?.addEventListener('scroll', sync);
+
+    return () => {
+      document.body.classList.remove('confirm-dialog-open');
+      window.visualViewport?.removeEventListener('resize', sync);
+      window.visualViewport?.removeEventListener('scroll', sync);
+    };
+  }, [open]);
 
   async function handleConfirm(event) {
     event.preventDefault();

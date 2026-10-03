@@ -9,8 +9,15 @@
   --olive: #4d6a4d;
   --line: rgba(44, 36, 28, 0.12);
   --shadow: 0 18px 40px rgba(44, 36, 28, 0.08);
-  /* Overlay chrome only (e.g. Chrome Ask Gemini). Safari uses 100svh instead. */
-  --browser-bottom: 0px;
+  /* Bottom browser toolbar overlay. visible-viewport.js raises this on iPhone and Android Chrome. */
+  --browser-chrome: 0px;
+  --shell-bottom-offset: 0px;
+  --bottom-nav-height: 4.15rem;
+  --mobile-footer-clearance: calc(
+    var(--shell-bottom-offset, 0px) + var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px)
+  );
+  /* Extra inset when the layout viewport is taller than the visible screen (toolbar at scroll top). */
+  --mobile-browser-ui-gap: max(0px, 100vh - 100svh);
   font-family: 'Source Sans 3', sans-serif;
   color: var(--ink);
   background: var(--paper);
@@ -860,6 +867,30 @@ textarea:focus-visible {
   margin-bottom: 1.25rem;
 }
 
+.account-email-warning {
+  color: var(--wine);
+  font-weight: 600;
+}
+
+.account-settings-form .form-subsection {
+  display: grid;
+  gap: 0.9rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--line);
+  margin-top: 0.15rem;
+}
+
+.account-settings-form .form-subsection-title {
+  font-family: var(--serif);
+  font-size: 1.15rem;
+  margin: 0.5rem 0 0;
+}
+
+.account-settings-form .form-subsection-lede {
+  margin: -0.35rem 0 0;
+  font-size: 0.92rem;
+}
+
 .form {
   display: grid;
   gap: 0.9rem;
@@ -924,11 +955,12 @@ textarea:focus-visible {
   align-items: center;
   justify-content: space-between;
   padding: 1rem 1.5rem;
+  padding-top: calc(1rem + env(safe-area-inset-top, 0px));
   border-bottom: 1px solid var(--line);
-  background: rgba(255, 248, 236, 0.9);
+  background: rgba(255, 248, 236, 0.95);
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 200;
   backdrop-filter: blur(10px);
 }
 
@@ -1753,7 +1785,7 @@ td {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: var(--browser-bottom, 0px);
+  bottom: var(--browser-chrome, 0px);
   z-index: 1000;
   max-height: min(85svh, calc(100% - 3rem));
   overflow: auto;
@@ -2457,9 +2489,15 @@ tr.editing td {
 .confirm-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1200;
+  z-index: 500;
   background: rgba(44, 36, 28, 0.45);
   animation: confirm-fade-in 0.15s ease;
+}
+
+body.confirm-dialog-open .bottom-nav,
+body.confirm-dialog-open .shell-slot {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .event-form-dialog {
@@ -2595,7 +2633,7 @@ tr.editing td {
   position: fixed;
   top: 50%;
   left: 50%;
-  z-index: 1201;
+  z-index: 501;
   width: min(92vw, 420px);
   transform: translate(-50%, -50%);
   background: var(--card);
@@ -2650,18 +2688,21 @@ button.confirm-danger:hover:not(:disabled) {
   background: #4a1822;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
+  /* Centered sheet avoids fighting the tab bar and browser URL bar at scroll top. */
   .confirm-dialog {
-    top: auto;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    width: 100%;
+    top: 50%;
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    width: min(92vw, 420px);
     max-width: none;
-    transform: none;
-    border-radius: 1.1rem 1.1rem 0 0;
-    padding: 1.25rem 1.25rem max(1.15rem, env(safe-area-inset-bottom));
-    animation: confirm-slide-up 0.22s ease;
+    max-height: min(82svh, calc(100svh - 2rem));
+    overflow-y: auto;
+    transform: translate(-50%, -50%);
+    border-radius: 1.1rem;
+    padding: 1.25rem 1.25rem 1.15rem;
+    animation: confirm-slide-in 0.18s ease;
   }
 
   .confirm-actions {
@@ -2925,50 +2966,122 @@ button.confirm-danger:hover:not(:disabled) {
   display: none;
 }
 
+.shell-slot {
+  display: none;
+}
+
+/* Mobile tab bar: fixed to the viewport so it is visible on first paint (no scroll needed) */
+html.layout-mobile .bottom-nav,
+.app-shell--mobile .bottom-nav {
+  display: flex;
+  position: fixed;
+  left: 0;
+  right: 0;
+  width: 100%;
+  box-sizing: border-box;
+  bottom: var(--shell-bottom-offset, 0px);
+  z-index: 300;
+  gap: 0.2rem;
+  min-height: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+  padding: 0.4rem 0.45rem calc(0.45rem + env(safe-area-inset-bottom, 0px));
+  background: rgba(255, 248, 236, 0.98);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -6px 24px rgba(44, 36, 28, 0.07);
+  backdrop-filter: blur(10px);
+}
+
+html.layout-mobile .nav-desktop,
+.app-shell--mobile .nav-desktop {
+  display: none;
+}
+
+html.layout-mobile .shell-slot,
+.app-shell--mobile .shell-slot {
+  display: block;
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 290;
+  bottom: calc(
+    var(--shell-bottom-offset, 0px) + var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px)
+  );
+}
+
+html.layout-mobile .app-shell,
+.app-shell--mobile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: auto;
+}
+
+html.layout-mobile .content,
+.app-shell--mobile .content {
+  flex: 0 1 auto;
+  width: min(1080px, calc(100% - 1rem));
+  margin: 0 auto;
+  padding: 1rem 0 calc(var(--mobile-footer-clearance) + 0.75rem);
+}
+
+html.layout-mobile .app-shell--with-slot .content,
+.app-shell--mobile.app-shell--with-slot .content {
+  padding-bottom: calc(var(--mobile-footer-clearance) + 5.5rem);
+}
+
 @media (max-width: 768px) {
   /*
-   * 100svh = visible height with browser toolbars expanded (Safari + Chrome).
-   * That keeps the in-flow bottom nav above the browser UI. Fallbacks first.
-   * --browser-bottom covers overlay chrome that still sits on top of the page.
+   * Bottom nav is viewport-fixed (not flex at the shell bottom) so it stays above
+   * the browser toolbar. visible-viewport.js sets --shell-bottom-offset.
    */
+
   body:has(.app-shell) {
-    overflow: hidden;
+    overflow-x: hidden;
   }
 
   .app-shell {
-    height: 100vh;
-    height: 100dvh;
-    height: 100svh;
-    max-height: 100vh;
-    max-height: 100dvh;
-    max-height: 100svh;
+    position: relative;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
-    box-sizing: border-box;
-    padding-bottom: var(--browser-bottom, 0px);
+    min-height: auto;
+    overflow: visible;
+  }
+
+  .shell-slot {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    z-index: 290;
+    bottom: calc(
+      var(--shell-bottom-offset, 0px) + var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px)
+    );
   }
 
   .topbar {
-    position: static;
+    position: sticky;
+    top: 0;
     flex: 0 0 auto;
-  }
-
-  .content {
-    width: min(1080px, calc(100% - 1rem));
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-x: hidden;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    padding: 1rem 0 1.5rem;
-  }
-
-  .topbar {
+    flex-shrink: 0;
     flex-wrap: nowrap;
     align-items: center;
     padding: 0.65rem 0.75rem;
+    padding-top: calc(0.65rem + env(safe-area-inset-top, 0px));
     gap: 0.65rem;
+    z-index: 200;
+    background: rgba(255, 248, 236, 0.95);
+    backdrop-filter: blur(10px);
+  }
+
+  .content {
+    flex: 0 1 auto;
+    width: min(1080px, calc(100% - 1rem));
+    margin: 0 auto;
+    overflow-x: hidden;
+    padding: 1rem 0 calc(var(--mobile-footer-clearance) + 0.75rem);
+  }
+
+  .app-shell--with-slot .content {
+    padding-bottom: calc(var(--mobile-footer-clearance) + 5.5rem);
   }
 
   .brand {
@@ -3012,11 +3125,15 @@ button.confirm-danger:hover:not(:disabled) {
 
   .bottom-nav {
     display: flex;
-    position: static;
-    flex: 0 0 auto;
-    z-index: 110;
+    position: fixed;
+    left: 0;
+    right: 0;
+    width: 100%;
+    box-sizing: border-box;
+    bottom: var(--shell-bottom-offset, 0px);
+    z-index: 300;
     gap: 0.2rem;
-    min-height: calc(4.15rem + env(safe-area-inset-bottom, 0px));
+    min-height: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
     padding: 0.4rem 0.45rem calc(0.45rem + env(safe-area-inset-bottom, 0px));
     background: rgba(255, 248, 236, 0.98);
     border-top: 1px solid var(--line);
@@ -3108,7 +3225,7 @@ button.confirm-danger:hover:not(:disabled) {
     left: 0;
     right: 0;
     top: auto;
-    bottom: 0;
+    bottom: var(--browser-chrome, 0px);
     transform: none;
     width: auto;
     max-width: none;
@@ -3170,11 +3287,10 @@ button.confirm-danger:hover:not(:disabled) {
   .attendance-save-bar {
     display: grid;
     gap: 0.5rem;
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: calc(4.15rem + env(safe-area-inset-bottom, 0px) + var(--browser-bottom, 0px));
-    z-index: 105;
+    position: static;
+    width: 100%;
+    box-sizing: border-box;
+    z-index: 1;
     padding: 0.65rem 0.75rem;
     background: rgba(255, 248, 236, 0.97);
     border-top: 1px solid var(--line);
@@ -3196,7 +3312,7 @@ button.confirm-danger:hover:not(:disabled) {
   }
 
   .attendance-card {
-    margin-bottom: 8rem;
+    margin-bottom: 0.5rem;
   }
 
   .roster-notes-toggle {

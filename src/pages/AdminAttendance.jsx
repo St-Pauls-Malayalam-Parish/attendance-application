@@ -8,6 +8,7 @@ import { EventCard } from '../components/EventCard.jsx';
 import { EventFiltersForm } from '../components/EventFiltersForm.jsx';
 import { FilterPanel } from '../components/FilterPanel.jsx';
 import { AttendanceRosterCard } from '../components/AttendanceRosterCard.jsx';
+import { ShellSlot } from '../components/ShellSlot.jsx';
 import { RosterFiltersForm } from '../components/RosterFiltersForm.jsx';
 import { LiturgicalColorBadge } from '../components/LiturgicalColorBadge.jsx';
 import { AttendanceStatusFields } from '../components/AttendanceStatusFields.jsx';
@@ -426,21 +427,23 @@ export function AdminAttendance() {
           )}
         </div>
 
-        <div className="attendance-save-bar" aria-live="polite">
-          <StatusMessage
-            message={saved}
-            className="attendance-save-feedback"
-            onDismiss={() => setSaved('')}
-          />
-          {unmarkedCount > 0 ? (
-            <button type="button" className="ghost attendance-jump-mobile" onClick={jumpToNextUnmarked}>
-              Next unmarked ({unmarkedCount})
+        <ShellSlot>
+          <div className="attendance-save-bar" aria-live="polite">
+            <StatusMessage
+              message={saved}
+              className="attendance-save-feedback"
+              onDismiss={() => setSaved('')}
+            />
+            {unmarkedCount > 0 ? (
+              <button type="button" className="ghost attendance-jump-mobile" onClick={jumpToNextUnmarked}>
+                Next unmarked ({unmarkedCount})
+              </button>
+            ) : null}
+            <button type="button" onClick={requestSave} disabled={confirmProps.busy}>
+              {confirmProps.busy ? 'Saving…' : 'Save attendance'}
             </button>
-          ) : null}
-          <button type="button" onClick={requestSave} disabled={confirmProps.busy}>
-            {confirmProps.busy ? 'Saving…' : 'Save attendance'}
-          </button>
-        </div>
+          </div>
+        </ShellSlot>
 
         <ConfirmDialog {...confirmProps} />
         </>

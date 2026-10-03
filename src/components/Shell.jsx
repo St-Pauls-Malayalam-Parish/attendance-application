@@ -1,7 +1,10 @@
-import { NavLink } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../AuthContext.jsx';
 import { ConfirmDialog } from './ConfirmDialog.jsx';
+import { ShellSlotContextProvider } from './ShellSlot.jsx';
 import { useConfirmDialog } from '../hooks/useConfirmDialog.js';
+import { useIsMobile } from '../hooks/useMediaQuery.js';
 import { publicUrl } from '../publicUrl.js';
 import { formatVoicePart } from '../api.js';
 
@@ -15,6 +18,18 @@ function roleLabel(user) {
 export function Shell({ children, links }) {
   const { user, logout } = useAuth();
   const { confirm, confirmProps } = useConfirmDialog();
+  const [shellSlot, setShellSlot] = useState(null);
+  const isMobile = useIsMobile();
+  const location = useLocation();
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('layout-mobile', isMobile);
+  }, [isMobile]);
+
+  useEffect(() => {
+    if (!isMobile) return;
+    window.scrollTo(0, 0);
+  }, [location.pathname, isMobile]);
 
   function requestSignOut() {
     confirm({
@@ -28,34 +43,45 @@ export function Shell({ children, links }) {
   }
 
   return (
-    <div className="app-shell">
-      <header className="topbar">
-        <div className="brand">
-          <img src={publicUrl('csi-logo.png')} alt="Church of South India" className="brand-logo" />
-          <div className="brand-text">
-            <strong>St Pauls Malayalam Parish, Pune</strong>
-            <p>Choir attendance</p>
+    <ShellSlotContextProvider value={setShellSlot}>
+      <div
+        className={[
+          'app-shell',
+          isMobile ? 'app-shell--mobile' : '',
+          shellSlot ? 'app-shell--with-slot' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
+        <header className="topbar">
+          <div className="brand">
+            <img src={publicUrl('csi-logo.png')} alt="Church of South India" className="brand-logo" />
+            <div className="brand-text">
+              <strong>St Pauls Malayalam Parish, Pune</strong>
+              <p>Choir attendance</p>
+            </div>
           </div>
-        </div>
-        <nav className="nav nav-desktop" aria-label="Main navigation">
-          {links.map((link) => (
-            <NavLink key={link.to} to={link.to} end={link.end}>
-              {link.label}
-            </NavLink>
-          ))}
-        </nav>
-        <div className="session">
-          <span>
-            {user.name}
-            <small>{roleLabel(user)}</small>
-          </span>
-          <button type="button" className="ghost session-signout" onClick={requestSignOut}>
-            Sign out
-          </button>
-        </div>
-      </header>
+          <nav className="nav nav-desktop" aria-label="Main navigation">
+            {links.map((link) => (
+              <NavLink key={link.to} to={link.to} end={link.end}>
+                {link.label}
+              </NavLink>
+            ))}
+          </nav>
+          <div className="session">
+            <span>
+              {user.name}
+              <small>{roleLabel(user)}</small>
+            </span>
+            <button type="button" className="ghost session-signout" onClick={requestSignOut}>
+              Sign out
+            </button>
+          </div>
+        </header>
 
-      <main className="content">{children}</main>
+        <main className="content">{children}</main>
+
+        {shellSlot ? <div className="shell-slot">{shellSlot}</div> : null}
 
         <nav className="bottom-nav" aria-label="Main navigation">
           {links.map((link) => (
@@ -67,7 +93,8 @@ export function Shell({ children, links }) {
             </NavLink>
           ))}
         </nav>
-      <ConfirmDialog {...confirmProps} />
-    </div>
+        <ConfirmDialog {...confirmProps} />
+      </div>
+    </ShellSlotContextProvider>
   );
 }

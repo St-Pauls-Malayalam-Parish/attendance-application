@@ -335,10 +335,15 @@ export function hasCountableAttendance(summary = {}) {
 }
 
 export function formatAttendanceRate(summary = {}) {
-  if (!hasCountableAttendance(summary)) {
+  if (hasCountableAttendance(summary)) {
+    return `${summary.rate ?? 0}%`;
+  }
+  const excused = summary.excused ?? 0;
+  const total = summary.total ?? 0;
+  if (excused > 0 && total > 0) {
     return '—';
   }
-  return `${summary.rate ?? 0}%`;
+  return '0%';
 }
 
 export function formatMemberAttendanceDetail(summary = {}) {

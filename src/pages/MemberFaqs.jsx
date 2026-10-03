@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { FaqAccordion } from '../components/FaqAccordion.jsx';
-import { Shell } from '../components/Shell.jsx';
 import { useAuth } from '../AuthContext.jsx';
-import { memberLinks } from '../nav/memberLinks.js';
 
 export function MemberFaqs() {
   const { user } = useAuth();
@@ -40,7 +38,7 @@ export function MemberFaqs() {
   }, [pending]);
 
   return (
-    <Shell links={memberLinks}>
+    <>
       <section className="page-head">
         <div>
           <p className="eyebrow">Help</p>
@@ -69,6 +67,6 @@ export function MemberFaqs() {
           />
         )}
       </div>
-    </Shell>
+    </>
   );
 }

@@ -4,6 +4,7 @@ import { ChangePasswordForm } from '../components/ChangePasswordForm.jsx';
 import { ConfirmDialog } from '../components/ConfirmDialog.jsx';
 import { useAuth } from '../AuthContext.jsx';
 import { useConfirmDialog } from '../hooks/useConfirmDialog.js';
+import { getFirstSignInCopy } from '../utils/onboarding-copy.js';
 
 export function ChangePassword() {
   const { user, loading, setUser, logout } = useAuth();
@@ -25,10 +26,12 @@ export function ChangePassword() {
     setUser(updatedUser);
   }
 
+  const onboardingCopy = getFirstSignInCopy(user);
+
   function requestSignOut() {
     confirm({
       title: 'Sign out?',
-      description: 'You can sign in again after setting your password.',
+      description: 'You can sign in again and finish account setup.',
       confirmLabel: 'Sign out',
       cancelLabel: 'Stay signed in',
       tone: 'default',
@@ -37,8 +40,8 @@ export function ChangePassword() {
   }
 
   return (
-    <AuthLayout title="Set your password">
-      <ChangePasswordForm required onSuccess={onSuccess} />
+    <AuthLayout title={onboardingCopy.pageTitle}>
+      <ChangePasswordForm required user={user} onSuccess={onSuccess} />
       <p className="auth-footer muted">
         <button type="button" className="ghost" onClick={requestSignOut}>
           Sign out

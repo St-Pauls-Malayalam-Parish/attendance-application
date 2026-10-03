@@ -1,7 +1,6 @@
-import { Shell } from '../components/Shell.jsx';
-import { ChangePasswordForm } from '../components/ChangePasswordForm.jsx';
+import { AccountSettingsForm } from '../components/AccountSettingsForm.jsx';
 import { useAuth } from '../AuthContext.jsx';
-import { memberLinks } from '../nav/memberLinks.js';
+import { emailNeedsUpdate } from '../utils/email.js';
 
 export function Account({ admin = false }) {
   const { user, setUser } = useAuth();
@@ -14,11 +13,17 @@ export function Account({ admin = false }) {
           <h1>{user.name}</h1>
           <p className="lede">
             Signed in as <strong>{user.username}</strong>
+            {user.email ? (
+              <>
+                {' '}
+                · <span className={emailNeedsUpdate(user) ? 'account-email-warning' : undefined}>{user.email}</span>
+              </>
+            ) : null}
             {admin ? ' (choir admin)' : ''}.
           </p>
         </div>
       </section>
-      <ChangePasswordForm onSuccess={setUser} />
+      <AccountSettingsForm user={user} onSuccess={setUser} />
     </>
   );
 
@@ -26,5 +31,5 @@ export function Account({ admin = false }) {
     return content;
   }
 
-  return <Shell links={memberLinks}>{content}</Shell>;
+  return content;
 }

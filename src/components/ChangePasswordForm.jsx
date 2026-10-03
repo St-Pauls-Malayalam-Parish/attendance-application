@@ -2,10 +2,20 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import { StatusMessage } from './StatusMessage.jsx';
+import { emailNeedsUpdate, isPlaceholderParishEmail, validateEmail } from '../utils/email.js';
+import { emailInputValue, passwordInputValue } from '../utils/credential-input.js';
 import { MIN_PASSWORD_LENGTH, validatePassword } from '../utils/password.js';
+import { voicePartNeedsUpdate } from '../utils/voice-part.js';
+import { VOICE_PARTS } from '../api.js';
+import { getFirstSignInCopy } from '../utils/onboarding-copy.js';
 
-export function ChangePasswordForm({ required = false, onSuccess }) {
+export function ChangePasswordForm({ required = false, user, onSuccess }) {
   const navigate = useNavigate();
+  const showEmail = required && emailNeedsUpdate(user);
+  const showVoicePart = required && voicePartNeedsUpdate(user);
+  const firstSignInCopy = required && user ? getFirstSignInCopy(user) : null;
+  const [voicePart, setVoicePart] = useState('');
+  const [email, setEmail] = useState(user?.email && !isPlaceholderParishEmail(user.email) ? user.email : '');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -31,11 +41,35 @@ export function ChangePasswordForm({ required = false, onSuccess }) {
       return;
     }
 
+    if (showEmail) {
+      const nextEmailError = validateEmail(email);
+      if (nextEmailError) {
+        setError(nextEmailError);
+        return;
+      }
+      if (isPlaceholderParishEmail(email)) {
+        setError('Please enter your personal email address');
+        return;
+      }
+    }
+
+    if (showVoicePart && !voicePart) {
+      setError('Please select your voice part');
+      return;
+    }
+
     setBusy(true);
     try {
+      const body = { currentPassword, newPassword };
+      if (showEmail || (email.trim() && email.trim().toLowerCase() !== (user?.email || '').toLowerCase())) {
+        body.email = email.trim();
+      }
+      if (showVoicePart) {
+        body.voicePart = voicePart;
+      }
       const data = await api('/api/auth/change-password', {
         method: 'POST',
-        body: { currentPassword, newPassword },
+        body,
         skipAuthRedirect: true,
       });
       setCurrentPassword('');
@@ -58,34 +92,72 @@ export function ChangePasswordForm({ required = false, onSuccess }) {
   }
 
   return (
-    <form className="card form" onSubmit={onSubmit}>
-      <h2>{required ? 'Set your password' : 'Change password'}</h2>
-      <p className="muted">
-        {required
-          ? `This is your first sign-in. Choose a personal password (at least ${MIN_PASSWORD_LENGTH} characters) before continuing.`
-          : `Use at least ${MIN_PASSWORD_LENGTH} characters. You will stay signed in after saving.`}
-      </p>
+    <form
+      className={`card form${required ? ' auth-form' : ''}`}
+      onSubmit={onSubmit}
+    >
+      {required ? (
+        <p className="auth-form-intro">{firstSignInCopy.intro}</p>
+      ) : (
+        <>
+          <h2>Change password</h2>
+          <p className="muted">
+            Use at least {MIN_PASSWORD_LENGTH} characters. You will stay signed in after saving.
+          </p>
+        </>
+      )}
       {error ? <p className="alert">{error}</p> : null}
       <StatusMessage message={saved} onDismiss={() => setSaved('')} />
+      {showEmail ? (
+        <label>
+          Email address
+          <input
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(emailInputValue(e.target.value))}
+            required
+          />
+        </label>
+      ) : null}
+      {showVoicePart ? (
+        <label>
+          Voice part
+          <select value={voicePart} onChange={(e) => setVoicePart(e.target.value)} required>
+            <option value="">Select voice part</option>
+            {VOICE_PARTS.map((part) => (
+              <option key={part.value} value={part.value}>
+                {part.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
       <label>
-        Current password
+        {required ? firstSignInCopy.currentPasswordLabel : 'Current password'}
         <input
           type="password"
           autoComplete="current-password"
           value={currentPassword}
-          onChange={(e) => setCurrentPassword(e.target.value)}
+          onChange={(e) => setCurrentPassword(passwordInputValue(e.target.value))}
           required
+          aria-describedby={required ? 'onboarding-temp-password-hint' : undefined}
         />
+        {required ? (
+          <span className="field-hint" id="onboarding-temp-password-hint">
+            {firstSignInCopy.currentPasswordHint}
+          </span>
+        ) : null}
       </label>
       <label>
-        New password
+        {required ? firstSignInCopy.newPasswordLabel : 'New password'}
         <input
           type="password"
           autoComplete="new-password"
           minLength={MIN_PASSWORD_LENGTH}
           value={newPassword}
           onChange={(e) => {
-            setNewPassword(e.target.value);
+            setNewPassword(passwordInputValue(e.target.value));
             if (newPasswordError) {
               setNewPasswordError('');
             }
@@ -105,18 +177,18 @@ export function ChangePasswordForm({ required = false, onSuccess }) {
         )}
       </label>
       <label>
-        Confirm new password
+        {required ? firstSignInCopy.confirmPasswordLabel : 'Confirm new password'}
         <input
           type="password"
           autoComplete="new-password"
           minLength={MIN_PASSWORD_LENGTH}
           value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
+          onChange={(e) => setConfirmPassword(passwordInputValue(e.target.value))}
           required
         />
       </label>
-      <button type="submit" disabled={busy}>
-        {busy ? 'Saving…' : required ? 'Continue' : 'Update password'}
+      <button type="submit" className={required ? 'auth-submit' : undefined} disabled={busy}>
+        {busy ? 'Saving…' : required ? firstSignInCopy.submitLabel : 'Update password'}
       </button>
     </form>
   );

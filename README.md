@@ -257,6 +257,7 @@ Tests cover API normalizers, attendance status display, filter helpers, and expo
 | Session expired right after login | Clear `choir_auth_token` and `choir_refresh_token` in localStorage and sign in again |
 | API calls hit the wrong host locally | `VITE_API_URL` should be empty so the Vite proxy is used |
 | A phone screen shows a heading and no people | That list is a table without a `.data-cards` block |
+| Bottom menu sits under Safari or Chrome toolbar | Hard-refresh after deploy. Mobile shell uses `100svh` plus a small overlay inset |
 
 ## License
 

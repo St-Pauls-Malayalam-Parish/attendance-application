@@ -1,3 +1,5 @@
+import { dateTimeLocalToUtc, formatEventDateTime, toDateTimeLocal as toLocalDateTime } from './utils/event-datetime.js';
+
 const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 const TOKEN_KEY = 'choir_auth_token';
 const REFRESH_TOKEN_KEY = 'choir_refresh_token';
@@ -201,15 +203,10 @@ export async function downloadApiFile(path) {
   URL.revokeObjectURL(url);
 }
 
+export { dateTimeLocalToUtc };
+
 export function formatDate(value) {
-  return new Date(value).toLocaleString('en-IN', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+  return formatEventDateTime(value);
 }
 
 export function toDateInput(value) {
@@ -219,9 +216,7 @@ export function toDateInput(value) {
 }
 
 export function toDateTimeLocal(value) {
-  const date = value ? new Date(value) : new Date();
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return toLocalDateTime(value);
 }
 
 export const VOICE_PARTS = [

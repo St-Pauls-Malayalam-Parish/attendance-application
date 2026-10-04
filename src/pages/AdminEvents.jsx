@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api, toDateTimeLocal } from '../api.js';
+import { api, dateTimeLocalToUtc, toDateTimeLocal } from '../api.js';
 import { EventCard } from '../components/EventCard.jsx';
 import { EventCalendar } from '../components/EventCalendar.jsx';
 import { EventDetailPanel } from '../components/EventDetailPanel.jsx';
@@ -292,11 +292,12 @@ export function AdminEvents() {
     setError('');
     setSaved('');
     try {
+      const body = { ...form, date: dateTimeLocalToUtc(form.date) };
       if (editingId) {
-        await api(`/api/events/${editingId}`, { method: 'PATCH', body: form });
+        await api(`/api/events/${editingId}`, { method: 'PATCH', body });
         setSaved('Event updated');
       } else {
-        await api('/api/events', { method: 'POST', body: form });
+        await api('/api/events', { method: 'POST', body });
         setSaved('Event added');
       }
       closeEventModal();
